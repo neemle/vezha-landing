@@ -1,0 +1,170 @@
+<div class="admin-shell">
+  <header class="admin-header">
+    <div>
+      <p class="eyebrow">VEZHA 360</p>
+      <h1>Content admin</h1>
+      <p class="muted">Edit landing copy for EN and UA locales. Changes are saved directly to the backend.</p>
+    </div>
+    <a routerLink="/" class="link">← Back to landing</a>
+  </header>
+
+  <section class="card token-card" [formGroup]="tokenForm">
+    <label>
+      <span>Admin token</span>
+      <input type="password" formControlName="adminToken" placeholder="x-admin-token" />
+    </label>
+    <p class="help">Token is stored locally to authorize admin API calls.</p>
+    <div class="token-actions">
+      <button class="primary" type="button" (click)="saveToken()" [disabled]="tokenForm.invalid">Save token</button>
+    </div>
+  </section>
+
+  <div class="grid">
+    @for (locale of locales; track locale) {
+      @let state = contentStates[locale];
+      <form class="card locale-card" [formGroup]="state.form" (ngSubmit)="saveLocale(locale)">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">Locale</p>
+            <h2>{{ locale.toUpperCase() }}</h2>
+          </div>
+          <div class="card-actions">
+            <button class="ghost" type="button" (click)="loadLocale(locale)" [disabled]="state.loading()">
+              {{ state.loading() ? 'Loading...' : 'Reload' }}
+            </button>
+            <button class="primary" type="submit" [disabled]="state.form.invalid || state.saving()">
+              {{ state.saving() ? 'Saving...' : 'Save content' }}
+            </button>
+          </div>
+        </div>
+
+        <label>
+          <span>Content JSON</span>
+          <textarea rows="22" formControlName="contentJson" spellcheck="false"></textarea>
+        </label>
+        <p class="help">Paste the full content payload for {{ locale.toUpperCase() }}. JSON must match the LandingContent shape.</p>
+
+        @if (state.error()) {
+          <div class="banner danger">{{ state.error() }}</div>
+        }
+        @if (state.success()) {
+          <div class="banner success">{{ state.success() }}</div>
+        }
+      </form>
+    }
+  </div>
+
+  <section class="card leads-card">
+    <div class="card-head">
+      <div>
+        <p class="eyebrow">Leads</p>
+        <h2>Lead inbox & export</h2>
+        <p class="help">Sort and filter leads. Only unexported, non-bad leads are exported.</p>
+      </div>
+      <div class="card-actions">
+        <button class="ghost" type="button" (click)="loadLeads()" [disabled]="leadsLoading()">
+          {{ leadsLoading() ? 'Loading...' : 'Refresh' }}
+        </button>
+        <button class="primary" type="button" (click)="exportLeads()" [disabled]="exporting()">
+          {{ exporting() ? 'Exporting...' : 'Export CSV' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="lead-filters">
+      <label>
+        <span>Exported status</span>
+        <select [value]="leadFilters().exported" (change)="updateExportedFilter($any($event.target).value)">
+          <option value="all">All</option>
+          <option value="unexported">Unexported</option>
+          <option value="exported">Exported</option>
+        </select>
+      </label>
+      <label class="checkbox">
+        <input
+          type="checkbox"
+          [checked]="leadFilters().includeBad"
+          (change)="toggleIncludeBad($any($event.target).checked)"
+        />
+        <span>Show bad leads</span>
+      </label>
+      <label class="search">
+        <span>Search</span>
+        <input
+          type="search"
+          [value]="leadFilters().search"
+          placeholder="Email, name, phone"
+          (keyup.enter)="applySearch($any($event.target).value)"
+          (blur)="applySearch($any($event.target).value)"
+        />
+      </label>
+    </div>
+
+    @if (leadsError()) {
+      <div class="banner danger">{{ leadsError() }}</div>
+    }
+    @if (leadsSuccess()) {
+      <div class="banner success">{{ leadsSuccess() }}</div>
+    }
+    @if (exportMessage()) {
+      <div class="banner success">{{ exportMessage() }}</div>
+    }
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th (click)="sortBy('createdAt')" role="button">Created</th>
+            <th (click)="sortBy('name')" role="button">Name</th>
+            <th (click)="sortBy('email')" role="button">Email</th>
+            <th>Phone</th>
+            <th>Message</th>
+            <th>Lang</th>
+            <th (click)="sortBy('exportedAt')" role="button">Exported</th>
+            <th>Bad</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (leadsLoading()) {
+            <tr>
+              <td colspan="9" class="center muted">Loading leads...</td>
+            </tr>
+          } @else if (viewLeads().length === 0) {
+            <tr>
+              <td colspan="9" class="center muted">No leads found.</td>
+            </tr>
+          } @else {
+            @for (lead of viewLeads(); track lead.id) {
+              <tr>
+                <td><span class="mono">{{ lead.createdAt | date: 'short' }}</span></td>
+                <td>{{ lead.name || '—' }}</td>
+                <td class="mono">{{ lead.email }}</td>
+                <td>{{ lead.phone || '—' }}</td>
+                <td class="message-cell">{{ lead.message || '—' }}</td>
+                <td>{{ lead.lang?.toUpperCase() || '—' }}</td>
+                <td>
+                  @if (lead.exportedAt) {
+                    <span class="mono">{{ lead.exportedAt | date: 'short' }}</span>
+                  } @else {
+                    <span class="pill muted">Not exported</span>
+                  }
+                </td>
+                <td>
+                  <span class="pill" [class.danger]="lead.bad" [class.success]="!lead.bad">
+                    {{ lead.bad ? 'Bad' : 'Good' }}
+                  </span>
+                </td>
+                <td>
+                  <button class="ghost" type="button" (click)="toggleBad(lead)">
+                    {{ lead.bad ? 'Mark good' : 'Mark bad' }}
+                  </button>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>

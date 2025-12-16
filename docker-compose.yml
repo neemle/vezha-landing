@@ -1,0 +1,16 @@
+version: '3.9'
+
+services:
+  vezha-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vezha-app:latest
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      ./db: /app/vezha.sqlite
+      ADMIN_TOKEN: vezha-admin
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
