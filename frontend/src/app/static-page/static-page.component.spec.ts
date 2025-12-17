@@ -34,16 +34,21 @@ describe('StaticPageComponent', () => {
     const harness = await RouterTestingHarness.create();
     const component = await harness.navigateByUrl('/about?lang=ua', StaticPageComponent);
 
-    const requests = httpMock.match(() => true);
-    const pageRequest = requests.find((req) => req.request.url === '/api/pages/about');
-    const footerRequest = requests.find((req) => req.request.url === '/api/pages/footer');
-    if (!pageRequest) throw new Error('Expected page request');
-    if (!footerRequest) throw new Error('Expected footer request');
+    const localesRequest = httpMock.expectOne((req) => req.url === '/api/content/locales');
+    localesRequest.flush([
+      { locale: 'en', active: true },
+      { locale: 'ua', active: true },
+    ]);
+
+    const footerRequests = httpMock.match((req) => req.url === '/api/pages/footer');
+    footerRequests.forEach((req) => {
+      const lang = req.request.params.get('lang') ?? 'en';
+      req.flush({ locale: lang, categories: [] });
+    });
+
+    const pageRequest = httpMock.expectOne((req) => req.url === '/api/pages/about');
 
     expect(pageRequest.request.params.get('lang')).toBe('ua');
-    expect(footerRequest.request.params.get('lang')).toBe('ua');
-
-    footerRequest.flush({ locale: 'ua', categories: [] });
     pageRequest.flush({ slug: 'about', title: 'Про нас', content: '<p>Про нас</p>', locale: 'ua' });
 
     harness.fixture.detectChanges();
@@ -54,11 +59,20 @@ describe('StaticPageComponent', () => {
     const harness = await RouterTestingHarness.create();
     const component = await harness.navigateByUrl('/about?lang=ua', StaticPageComponent);
 
-    const requests = httpMock.match(() => true);
-    requests.forEach((req) => {
-      if (req.request.url === '/api/pages/footer') req.flush({ locale: 'ua', categories: [] });
-      if (req.request.url === '/api/pages/about') req.flush({ slug: 'about', title: 'Про нас', content: '<p>Про нас</p>', locale: 'ua' });
+    const localesRequest = httpMock.expectOne((req) => req.url === '/api/content/locales');
+    localesRequest.flush([
+      { locale: 'en', active: true },
+      { locale: 'ua', active: true },
+    ]);
+
+    const footerRequests = httpMock.match((req) => req.url === '/api/pages/footer');
+    footerRequests.forEach((req) => {
+      const lang = req.request.params.get('lang') ?? 'en';
+      req.flush({ locale: lang, categories: [] });
     });
+
+    const pageRequest = httpMock.expectOne((req) => req.url === '/api/pages/about');
+    pageRequest.flush({ slug: 'about', title: 'Про нас', content: '<p>Про нас</p>', locale: 'ua' });
 
     const router = TestBed.inject(Router);
     const navigateSpy = spyOn(router, 'navigate').and.returnValue(Promise.resolve(true));
@@ -72,4 +86,3 @@ describe('StaticPageComponent', () => {
     );
   });
 });
-

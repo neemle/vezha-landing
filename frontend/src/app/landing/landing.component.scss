@@ -91,25 +91,44 @@
 
 .lang-switch {
   display: flex;
-  gap: 0.25rem;
+  align-items: center;
   background: #f0e9df;
-  padding: 0.25rem;
+  padding: 0.25rem 0.5rem;
   border-radius: 12px;
 }
 
-.lang-switch button {
-  border: none;
+.lang-select {
+  position: relative;
+}
+
+.lang-select select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  font: inherit;
   background: transparent;
-  padding: 0.4rem 0.75rem;
+  border: none;
+  padding: 0.4rem 1.6rem 0.4rem 0.75rem;
   border-radius: 10px;
   cursor: pointer;
   color: #53493e;
   font-weight: 600;
 }
 
-.lang-switch button.active {
-  background: #3f5940;
-  color: #f6f3ef;
+.lang-select select:focus {
+  outline: 2px solid rgba(63, 89, 64, 0.35);
+  outline-offset: 2px;
+}
+
+.lang-select::after {
+  content: '▾';
+  position: absolute;
+  top: 50%;
+  right: 0.55rem;
+  transform: translateY(-50%);
+  pointer-events: none;
+  font-size: 0.8rem;
+  color: #7a6d60;
 }
 
 .quick-links {

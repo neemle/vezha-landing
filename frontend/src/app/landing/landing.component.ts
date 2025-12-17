@@ -29,6 +29,7 @@ export class LandingComponent implements OnInit {
   error = signal<string>('');
   submitted = signal<boolean>(false);
   submitting = signal<boolean>(false);
+  private localesLoadedFromApi = false;
 
   private readonly fb = inject(FormBuilder);
   private readonly contentService = inject(ContentService);
@@ -45,9 +46,7 @@ export class LandingComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    const fromUrl = this.route.snapshot.queryParamMap.get('lang');
-    if (fromUrl) this.activeLang.set(fromUrl.trim());
-    this.loadContent(this.activeLang());
+    this.loadLocalesAndContent();
   }
 
   switchLang(lang: string): void {
@@ -136,7 +135,49 @@ export class LandingComponent implements OnInit {
       if (existing) {
         return items.map((item) => (item.code === code ? { ...item, active } : item));
       }
+      if (this.localesLoadedFromApi) return items;
       return [...items, { code, active }];
     });
+  }
+
+  private loadLocalesAndContent(): void {
+    const requestedLang = this.normalizeLocale(this.route.snapshot.queryParamMap.get('lang'));
+    this.contentService.getLocales().subscribe({
+      next: (locales) => {
+        const mapped = locales
+          .map((item) => ({ code: this.normalizeLocale(item.locale), active: item.active }))
+          .filter((item) => !!item.code);
+        const hasEn = mapped.some((item) => item.code === 'en');
+        const list = hasEn ? mapped : [{ code: 'en', active: true }, ...mapped];
+        this.locales.set(list);
+        this.localesLoadedFromApi = true;
+
+        const isRequestedActive = list.some((item) => item.code === requestedLang && item.active);
+        const resolved = isRequestedActive ? requestedLang : 'en';
+        this.activeLang.set(resolved);
+        if (resolved !== requestedLang) {
+          this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: { lang: resolved },
+            queryParamsHandling: 'merge',
+            replaceUrl: true,
+          });
+        }
+        this.loadContent(resolved);
+      },
+      error: () => {
+        if (requestedLang) this.activeLang.set(requestedLang);
+        this.loadContent(this.activeLang());
+      },
+    });
+  }
+
+  private normalizeLocale(locale: string | null | undefined): string {
+    if (!locale) return 'en';
+    const lower = locale.trim().toLowerCase();
+    const primary = lower.split('-')[0] ?? lower;
+    if (primary === 'uk' || primary === 'ua') return 'ua';
+    if (primary === 'en') return 'en';
+    return primary;
   }
 }

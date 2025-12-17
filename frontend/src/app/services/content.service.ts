@@ -3,6 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { LandingContent } from '../models/landing-content.model';
 import { Observable } from 'rxjs';
 
+export type LandingLocaleStatus = { locale: string; active: boolean };
+
 @Injectable({ providedIn: 'root' })
 export class ContentService {
   private readonly apiBase = this.resolveApiBase();
@@ -13,6 +15,10 @@ export class ContentService {
     return this.http.get<LandingContent>(`${this.apiBase}/content`, {
       params: { lang },
     });
+  }
+
+  getLocales(): Observable<LandingLocaleStatus[]> {
+    return this.http.get<LandingLocaleStatus[]>(`${this.apiBase}/content/locales`);
   }
 
   private resolveApiBase(): string {

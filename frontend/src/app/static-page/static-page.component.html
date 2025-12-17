@@ -12,11 +12,13 @@
     </a>
     <div class="top-actions">
       <div class="lang-switch">
-        @for (locale of locales(); track locale.code) {
-          <button type="button" [class.active]="activeLang() === locale.code" (click)="switchLang(locale.code)">
-            {{ locale.code.toUpperCase() }}
-          </button>
-        }
+        <label class="lang-select">
+          <select aria-label="Language" #langSelect [value]="activeLang()" (change)="switchLang(langSelect.value)">
+            @for (locale of activeLocales(); track locale.code) {
+              <option [value]="locale.code">{{ locale.code.toUpperCase() }}</option>
+            }
+          </select>
+        </label>
       </div>
       <a routerLink="/" class="link">{{ activeLang() === 'ua' ? '← На головну' : '← Back' }}</a>
     </div>
@@ -43,4 +45,3 @@
 
   <app-site-footer [lang]="activeLang()"></app-site-footer>
 </div>
-

@@ -1,11 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsIn, IsNotEmpty, IsObject, IsString } from 'class-validator';
+import { IsNotEmpty, IsObject, IsString, Matches } from 'class-validator';
 import type { LandingContentPayload } from '../default-content';
 
 export class UpdateContentDto {
-  @ApiProperty({ enum: ['en', 'ua'], description: 'Locale to update', example: 'en' })
+  @ApiProperty({ description: 'Locale to update (e.g. en, ua, pl)', example: 'en' })
   @IsString()
-  @IsIn(['en', 'ua'])
+  @IsNotEmpty()
+  @Matches(/^[a-zA-Z-]{2,8}$/, { message: 'locale must be a short language code (e.g. en, ua, pl)' })
   locale!: string;
 
   @ApiProperty({ type: Object, description: 'Localized content payload body' })

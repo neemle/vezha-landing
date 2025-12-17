@@ -1,14 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { combineLatest, distinctUntilChanged, finalize, map, of, switchMap, catchError } from 'rxjs';
 import { PublicStaticPage } from '../models/static-page.model';
+import { ContentService } from '../services/content.service';
 import { PagesService } from '../services/pages.service';
 import { SeoService } from '../services/seo.service';
 import { SiteFooterComponent } from '../site-footer/site-footer.component';
-
-type LocaleOption = { code: string };
 
 @Component({
   selector: 'app-static-page',
@@ -19,7 +18,11 @@ type LocaleOption = { code: string };
 })
 export class StaticPageComponent implements OnInit {
   activeLang = signal<string>('en');
-  locales = signal<LocaleOption[]>([{ code: 'en' }, { code: 'ua' }]);
+  locales = signal<Array<{ code: string; active: boolean }>>([
+    { code: 'en', active: true },
+    { code: 'ua', active: true },
+  ]);
+  activeLocales = computed(() => this.locales().filter((locale) => locale.active));
   page = signal<PublicStaticPage | null>(null);
   loading = signal<boolean>(false);
   error = signal<string>('');
@@ -27,10 +30,12 @@ export class StaticPageComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly contentService = inject(ContentService);
   private readonly pages = inject(PagesService);
   private readonly seo = inject(SeoService);
 
   ngOnInit(): void {
+    this.loadLocales();
     combineLatest([this.route.paramMap, this.route.queryParamMap])
       .pipe(
         map(([params, query]) => {
@@ -79,5 +84,31 @@ export class StaticPageComponent implements OnInit {
       queryParamsHandling: 'merge',
     });
   }
-}
 
+  private loadLocales(): void {
+    this.contentService.getLocales().subscribe({
+      next: (locales) => {
+        const mapped = locales
+          .map((item) => ({ code: this.normalizeLocale(item.locale), active: item.active }))
+          .filter((item) => !!item.code);
+        const hasEn = mapped.some((item) => item.code === 'en');
+        this.locales.set(hasEn ? mapped : [{ code: 'en', active: true }, ...mapped]);
+      },
+      error: () => {
+        this.locales.set([
+          { code: 'en', active: true },
+          { code: 'ua', active: true },
+        ]);
+      },
+    });
+  }
+
+  private normalizeLocale(locale: string | null | undefined): string {
+    if (!locale) return 'en';
+    const lower = locale.trim().toLowerCase();
+    const primary = lower.split('-')[0] ?? lower;
+    if (primary === 'uk' || primary === 'ua') return 'ua';
+    if (primary === 'en') return 'en';
+    return primary;
+  }
+}

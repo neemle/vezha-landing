@@ -1,6 +1,6 @@
 import { Controller, Get, Headers, Query } from '@nestjs/common';
 import { ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { ContentService } from './content.service';
+import { ContentService, LandingLocaleStatus } from './content.service';
 import type { LandingContentPayload } from './default-content';
 import { DEFAULT_CONTENT } from './default-content';
 
@@ -8,6 +8,15 @@ import { DEFAULT_CONTENT } from './default-content';
 @Controller('content')
 export class ContentController {
   constructor(private readonly contentService: ContentService) {}
+
+  @ApiOkResponse({
+    description: 'List of available landing locales with active flag',
+    schema: { example: [{ locale: 'en', active: true }, { locale: 'ua', active: true }] },
+  })
+  @Get('locales')
+  async locales(): Promise<LandingLocaleStatus[]> {
+    return this.contentService.listLocales();
+  }
 
   @ApiQuery({
     name: 'lang',
