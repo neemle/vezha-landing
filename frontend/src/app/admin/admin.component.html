@@ -19,7 +19,110 @@
     </div>
   </section>
 
-  <form class="card content-card" [formGroup]="selectedContent().form" (ngSubmit)="saveLocale(activeLocale())" novalidate>
+  <nav class="tabs" aria-label="Admin sections">
+    <button type="button" class="tab" [class.active]="adminTab() === 'setup'" (click)="selectAdminTab('setup')">Setup</button>
+    <button type="button" class="tab" [class.active]="adminTab() === 'leads'" (click)="selectAdminTab('leads')">Leads</button>
+  </nav>
+
+  @if (adminTab() === 'setup') {
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <p class="eyebrow">Setup</p>
+          <h2>Locales</h2>
+          <p class="help">Add languages and enable/disable them for the public site.</p>
+        </div>
+        <div class="card-actions">
+          <button class="ghost" type="button" (click)="loadLocaleIndex()" [disabled]="localeIndexLoading()">
+            {{ localeIndexLoading() ? 'Loading…' : 'Refresh' }}
+          </button>
+        </div>
+      </div>
+
+      <div class="locale-controls">
+        <label class="stacked">
+          <span>Active locale</span>
+          <select #adminLocaleSelect [value]="activeLocale()" (change)="switchLocale(adminLocaleSelect.value)">
+            @for (locale of locales(); track locale.code) {
+              <option [value]="locale.code">{{ locale.code.toUpperCase() }}</option>
+            }
+          </select>
+        </label>
+
+        <div class="locale-add" [formGroup]="localeForm">
+          <label>
+            <span>New locale code</span>
+            <input formControlName="newLocale" placeholder="e.g. pl or fr" />
+          </label>
+          <button class="ghost" type="button" (click)="addLocale()" [disabled]="localeForm.invalid || localeIndexLoading()">
+            Add locale (copies EN)
+          </button>
+        </div>
+      </div>
+
+      @if (localeIndexError()) {
+        <div class="banner danger">{{ localeIndexError() }}</div>
+      }
+      @if (localeIndexSuccess()) {
+        <div class="banner success">{{ localeIndexSuccess() }}</div>
+      }
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Active</th>
+              <th>Code</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @if (localeIndexLoading()) {
+              <tr>
+                <td colspan="3" class="center muted">Loading locales…</td>
+              </tr>
+            } @else if (locales().length === 0) {
+              <tr>
+                <td colspan="3" class="center muted">No locales yet.</td>
+              </tr>
+            } @else {
+              @for (locale of locales(); track locale.code) {
+                <tr [class.selected]="locale.code === activeLocale()">
+                  <td>
+                    <input
+                      #localeActive
+                      type="checkbox"
+                      [checked]="locale.active"
+                      [disabled]="locale.code === 'en'"
+                      (change)="toggleLocaleActive(locale.code, localeActive.checked)"
+                    />
+                  </td>
+                  <td class="mono">{{ locale.code }}</td>
+                  <td>
+                    <button class="ghost" type="button" (click)="editLocale(locale.code)">Edit</button>
+                  </td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <nav class="tabs subtabs" aria-label="Setup sections">
+      <button
+        type="button"
+        class="tab"
+        [class.active]="setupTab() === 'main-page'"
+        (click)="selectSetupTab('main-page')"
+      >
+        Main page
+      </button>
+      <button type="button" class="tab" [class.active]="setupTab() === 'content'" (click)="selectSetupTab('content')">Content</button>
+    </nav>
+
+    @if (setupTab() === 'main-page') {
+      <form class="card content-card" [formGroup]="selectedContent().form" (ngSubmit)="saveLocale(activeLocale())" novalidate>
     <datalist id="fa-icons-list">
       @for (icon of iconOptions; track icon) {
         <option [value]="icon">{{ icon }}</option>
@@ -27,32 +130,18 @@
     </datalist>
     <div class="card-head content-head">
       <div>
-        <p class="eyebrow">Content</p>
-        <h2>Visual content builder</h2>
-        <p class="muted">Select a locale, edit blocks, and drag to reorder list items.</p>
+        <p class="eyebrow">Main page</p>
+        <h2>Landing content</h2>
+        <p class="muted">Edit landing copy for {{ activeLocale().toUpperCase() }}.</p>
       </div>
       <div class="card-actions content-actions">
-        <label class="stacked">
-          <span>Locale</span>
-          <select [value]="activeLocale()" (change)="switchLocale($any($event.target).value)">
-            @for (locale of locales(); track locale) {
-              <option [value]="locale">{{ locale.toUpperCase() }}</option>
-            }
-          </select>
-        </label>
+        <span class="pill muted">{{ activeLocale().toUpperCase() }}</span>
         <button class="ghost" type="button" (click)="loadLocale(activeLocale())" [disabled]="selectedContent().loading()">
           {{ selectedContent().loading() ? 'Loading…' : 'Reload' }}
         </button>
         <button class="primary" type="submit" [disabled]="selectedContent().saving()">
           {{ selectedContent().saving() ? 'Saving…' : 'Save content' }}
         </button>
-      </div>
-      <div class="locale-add" [formGroup]="localeForm">
-        <label>
-          <span>New locale code</span>
-          <input formControlName="newLocale" placeholder="e.g. pl or fr" />
-        </label>
-        <button class="ghost" type="button" (click)="addLocale()" [disabled]="localeForm.invalid">Add locale (copies EN)</button>
       </div>
     </div>
 
@@ -64,10 +153,6 @@
     }
 
     <div class="editor-grid">
-      <label class="checkbox">
-        <input type="checkbox" formControlName="active" />
-        <span>Locale is active</span>
-      </label>
 
       <div class="section" formGroupName="hero">
         <div class="section-head">
@@ -475,8 +560,10 @@
       </div>
     </div>
   </form>
+    }
 
-  <section class="card">
+    @if (setupTab() === 'content') {
+      <section class="card">
     <div class="card-head">
       <div>
         <p class="eyebrow">Pages</p>
@@ -786,7 +873,8 @@
       </div>
     }
   </section>
-
+    }
+  } @else {
   <section class="card leads-card">
     <div class="card-head">
       <div>
@@ -807,7 +895,7 @@
     <div class="lead-filters">
       <label>
         <span>Exported status</span>
-        <select [value]="leadFilters().exported" (change)="updateExportedFilter($any($event.target).value)">
+        <select #exportFilter [value]="leadFilters().exported" (change)="updateExportedFilter(exportFilter.value)">
           <option value="all">All</option>
           <option value="unexported">Unexported</option>
           <option value="exported">Exported</option>
@@ -815,20 +903,22 @@
       </label>
       <label class="checkbox">
         <input
+          #includeBadToggle
           type="checkbox"
           [checked]="leadFilters().includeBad"
-          (change)="toggleIncludeBad($any($event.target).checked)"
+          (change)="toggleIncludeBad(includeBadToggle.checked)"
         />
         <span>Show bad leads</span>
       </label>
       <label class="search">
         <span>Search</span>
         <input
+          #leadSearch
           type="search"
           [value]="leadFilters().search"
           placeholder="Email, name, phone"
-          (keyup.enter)="applySearch($any($event.target).value)"
-          (blur)="applySearch($any($event.target).value)"
+          (keyup.enter)="applySearch(leadSearch.value)"
+          (blur)="applySearch(leadSearch.value)"
         />
       </label>
     </div>
@@ -900,4 +990,5 @@
       </table>
     </div>
   </section>
+  }
 </div>

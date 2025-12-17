@@ -10,13 +10,17 @@ import {
   Validators,
 } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
+import { finalize, switchMap } from 'rxjs';
 import { AdminPageCategory, AdminStaticPage, AdminStaticPageListItem } from '../models/admin-pages.model';
 import { LandingContent } from '../models/landing-content.model';
 import { Lead } from '../models/lead.model';
 import { AdminService, LeadExportFilter } from '../services/admin.service';
+import { ContentService, LandingLocaleStatus } from '../services/content.service';
 
 type Locale = string;
+type LocaleStatus = { code: Locale; active: boolean };
+type AdminTab = 'setup' | 'leads';
+type SetupTab = 'main-page' | 'content';
 type LeadSortKey = 'createdAt' | 'email' | 'name' | 'exportedAt';
 type DragList = 'heroBullets' | 'painPoints' | 'features' | 'metricsStats' | 'howItWorks';
 type DragContext = { list: DragList; from: number; locale: Locale };
@@ -127,8 +131,18 @@ type PageTranslationFormGroup = FormGroup<{
 export class AdminComponent implements OnInit {
   private readonly admin = inject(AdminService);
   private readonly fb = inject(FormBuilder);
+  private readonly contentService = inject(ContentService);
 
-  readonly locales = signal<Locale[]>(['en', 'ua']);
+  readonly adminTab = signal<AdminTab>('setup');
+  readonly setupTab = signal<SetupTab>('main-page');
+
+  readonly locales = signal<LocaleStatus[]>([
+    { code: 'en', active: true },
+    { code: 'ua', active: true },
+  ]);
+  readonly localeIndexLoading = signal(false);
+  readonly localeIndexError = signal('');
+  readonly localeIndexSuccess = signal('');
   readonly activeLocale = signal<Locale>('en');
   readonly dragState = signal<DragContext | null>(null);
   readonly iconOptions: string[] = [
@@ -249,37 +263,58 @@ export class AdminComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.loadLocaleIndex();
     const token = this.admin.token();
     if (token) {
-      this.loadLocale(this.activeLocale());
-      this.loadPageCategories(this.activeLocale());
-      this.loadStaticPages(this.activeLocale());
-      this.loadLeads();
+      this.loadForCurrentView();
     }
   }
 
   saveToken(): void {
     const token = this.tokenForm.controls.adminToken.value.trim();
     this.admin.setToken(token);
-    if (token && !this.selectedContent().loaded()) {
-      this.loadLocale(this.activeLocale());
-    }
     if (token) {
+      this.loadLocaleIndex();
+      this.loadForCurrentView();
+    }
+  }
+
+  selectAdminTab(tab: AdminTab): void {
+    if (this.adminTab() === tab) return;
+    this.adminTab.set(tab);
+    if (tab === 'leads') {
+      this.loadLeads();
+      return;
+    }
+    this.loadForCurrentView();
+  }
+
+  selectSetupTab(tab: SetupTab): void {
+    if (this.setupTab() === tab) return;
+    this.setupTab.set(tab);
+    if (this.adminTab() !== 'setup') return;
+    if (tab === 'content') {
       this.loadPageCategories(this.activeLocale());
       this.loadStaticPages(this.activeLocale());
-      this.loadLeads();
+      return;
+    }
+    const locale = this.activeLocale();
+    if (!this.ensureState(locale).loaded()) {
+      this.loadLocale(locale);
     }
   }
 
   switchLocale(locale: Locale): void {
-    if (this.activeLocale() === locale) return;
-    this.activeLocale.set(locale);
-    if (!this.ensureState(locale).loaded() && this.admin.token()) {
-      this.loadLocale(locale);
-    }
-    if (this.admin.token()) {
-      this.loadPageCategories(locale);
-      this.loadStaticPages(locale);
+    const normalized = this.normalizeLocale(locale);
+    if (this.activeLocale() === normalized) return;
+    this.activeLocale.set(normalized);
+    if (this.admin.token() && this.adminTab() === 'setup') {
+      if (this.setupTab() === 'content') {
+        this.loadPageCategories(normalized);
+        this.loadStaticPages(normalized);
+      } else if (!this.ensureState(normalized).loaded()) {
+        this.loadLocale(normalized);
+      }
     }
     this.selectedPageCategoryId.set(null);
     this.selectedStaticPageId.set(null);
@@ -287,31 +322,57 @@ export class AdminComponent implements OnInit {
   }
 
   addLocale(): void {
-    const code = this.localeForm.controls.newLocale.value.trim().toLowerCase() as Locale;
+    this.localeIndexError.set('');
+    this.localeIndexSuccess.set('');
+    if (this.localeForm.invalid) {
+      this.localeForm.markAllAsTouched();
+      return;
+    }
+    const code = this.normalizeLocale(this.localeForm.controls.newLocale.value);
     if (!code) return;
-    if (this.locales().includes(code)) {
+    if (this.locales().some((locale) => locale.code === code)) {
       this.localeForm.controls.newLocale.setErrors({ duplicate: true });
       return;
     }
-    const fallback = this.ensureState('en');
-    if (!fallback.loaded()) {
-      this.selectedContent().error.set('Load EN first so it can be used as a fallback template.');
-      this.loadLocale('en');
+    const newState = this.ensureState(code);
+    newState.error.set('');
+    newState.success.set('');
+    const token = this.ensureToken();
+    if (!token) {
+      this.localeIndexError.set('Admin token is required to create locales.');
       return;
     }
-    const fallbackContent = this.toLandingContent(fallback.form, 'en');
-    const newState = this.ensureState(code);
-    newState.form = this.createContentForm({ ...fallbackContent, locale: code, active: true }, code);
-    newState.loaded.set(true);
-    newState.error.set('');
-    newState.success.set('Locale created from EN fallback.');
-    this.locales.update((list) => [...list, code]);
-    this.activeLocale.set(code);
-    if (this.admin.token()) {
-      this.loadPageCategories(code);
-      this.loadStaticPages(code);
-    }
-    this.localeForm.reset({ newLocale: '' });
+    newState.loading.set(true);
+    this.admin
+      .getContent('en')
+      .pipe(
+        switchMap((content) => {
+          const payload: LandingContent = { ...content, locale: code, active: true };
+          return this.admin.updateContent(code, payload);
+        }),
+        finalize(() => newState.loading.set(false)),
+      )
+      .subscribe({
+        next: (saved) => {
+          newState.form = this.createContentForm(saved, code);
+          newState.loaded.set(true);
+          newState.success.set('Locale created from EN fallback.');
+          this.activeLocale.set(code);
+          this.locales.update((items) => this.upsertLocaleStatus(items, { code, active: true }));
+          this.localeIndexSuccess.set('Locale created.');
+          this.localeForm.reset({ newLocale: '' });
+          this.loadLocaleIndex();
+          if (this.adminTab() === 'setup') {
+            this.setupTab.set('main-page');
+          }
+        },
+        error: (err) => {
+          const message = this.humanizeError(err);
+          newState.error.set(message);
+          this.localeIndexError.set(message);
+          this.loadLocaleIndex();
+        },
+      });
   }
 
   loadLocale(locale: Locale): void {
@@ -357,9 +418,96 @@ export class AdminComponent implements OnInit {
       .updateContent(locale, payload)
       .pipe(finalize(() => state.saving.set(false)))
       .subscribe({
-        next: () => state.success.set('Content saved.'),
+        next: () => {
+          state.success.set('Content saved.');
+          this.loadLocaleIndex();
+        },
         error: (err) => state.error.set(this.humanizeError(err)),
       });
+  }
+
+  toggleLocaleActive(locale: Locale, active: boolean): void {
+    if (locale === 'en') return;
+    this.localeIndexError.set('');
+    this.localeIndexSuccess.set('');
+    const previous = this.locales().find((item) => item.code === locale);
+    this.locales.update((items) => items.map((item) => (item.code === locale ? { ...item, active } : item)));
+    const token = this.ensureToken();
+    if (!token) {
+      if (previous) {
+        this.locales.update((items) => items.map((item) => (item.code === locale ? { ...item, active: previous.active } : item)));
+      }
+      this.localeIndexError.set('Admin token is required to update locales.');
+      return;
+    }
+
+    const state = this.ensureState(locale);
+    if (state.loaded()) {
+      state.form.controls.active.setValue(active);
+      this.saveLocale(locale);
+      return;
+    }
+
+    state.loading.set(true);
+    state.error.set('');
+    this.admin.getContent(locale).subscribe({
+      next: (content) => {
+        state.loading.set(false);
+        const updated: LandingContent = { ...content, locale, active };
+        state.form = this.createContentForm(updated, locale);
+        state.loaded.set(true);
+        this.saveLocale(locale);
+        this.localeIndexSuccess.set('Locale updated.');
+      },
+      error: (err) => {
+        state.loading.set(false);
+        const message = this.humanizeError(err);
+        state.error.set(message);
+        this.localeIndexError.set(message);
+        this.loadLocaleIndex();
+      },
+    });
+  }
+
+  editLocale(locale: Locale): void {
+    this.adminTab.set('setup');
+    this.setupTab.set('main-page');
+    this.switchLocale(locale);
+  }
+
+  loadLocaleIndex(): void {
+    this.localeIndexLoading.set(true);
+    this.localeIndexError.set('');
+    this.localeIndexSuccess.set('');
+    this.contentService
+      .getLocales()
+      .pipe(finalize(() => this.localeIndexLoading.set(false)))
+      .subscribe({
+        next: (locales) => this.updateLocaleIndex(locales),
+        error: () => {
+          this.localeIndexError.set('Unable to load locale list.');
+          this.locales.set([
+            { code: 'en', active: true },
+            { code: 'ua', active: true },
+          ]);
+        },
+      });
+  }
+
+  private loadForCurrentView(): void {
+    if (this.adminTab() === 'leads') {
+      this.loadLeads();
+      return;
+    }
+    if (this.setupTab() === 'content') {
+      this.loadPageCategories(this.activeLocale());
+      this.loadStaticPages(this.activeLocale());
+      return;
+    }
+    const locale = this.activeLocale();
+    if (!this.ensureState(locale).loaded()) {
+      this.loadLocale(locale);
+    }
   }
 
   loadPageCategories(locale: Locale): void {
@@ -663,8 +811,9 @@ export class AdminComponent implements OnInit {
       });
   }
 
-  updateExportedFilter(exported: LeadExportFilter): void {
-    this.leadFilters.update((f) => ({ ...f, exported }));
+  updateExportedFilter(value: string): void {
+    const next: LeadExportFilter = value === 'exported' || value === 'unexported' ? value : 'all';
+    this.leadFilters.update((f) => ({ ...f, exported: next }));
     this.loadLeads();
   }
 
@@ -784,8 +933,53 @@ export class AdminComponent implements OnInit {
     if (fromList !== list || fromLocale !== locale) return;
     const from = Number.parseInt(fromIndexStr, 10);
     if (Number.isNaN(from) || from === toIndex) return;
-    const array = this.getArray(locale, list);
-    this.moveFormArrayItem(array, from, toIndex);
+    switch (list) {
+      case 'heroBullets': {
+        const array = this.heroBullets(locale);
+        const control = array.at(from);
+        if (!control) break;
+        array.removeAt(from);
+        const targetIndex = toIndex >= array.length ? array.length : toIndex;
+        array.insert(targetIndex, control);
+        break;
+      }
+      case 'painPoints': {
+        const array = this.painPoints(locale);
+        const control = array.at(from);
+        if (!control) break;
+        array.removeAt(from);
+        const targetIndex = toIndex >= array.length ? array.length : toIndex;
+        array.insert(targetIndex, control);
+        break;
+      }
+      case 'features': {
+        const array = this.features(locale);
+        const control = array.at(from);
+        if (!control) break;
+        array.removeAt(from);
+        const targetIndex = toIndex >= array.length ? array.length : toIndex;
+        array.insert(targetIndex, control);
+        break;
+      }
+      case 'metricsStats': {
+        const array = this.metricsStats(locale);
+        const control = array.at(from);
+        if (!control) break;
+        array.removeAt(from);
+        const targetIndex = toIndex >= array.length ? array.length : toIndex;
+        array.insert(targetIndex, control);
+        break;
+      }
+      case 'howItWorks': {
+        const array = this.howItWorks(locale);
+        const control = array.at(from);
+        if (!control) break;
+        array.removeAt(from);
+        const targetIndex = toIndex >= array.length ? array.length : toIndex;
+        array.insert(targetIndex, control);
+        break;
+      }
+    }
     this.dragState.set(null);
   }
 
@@ -798,10 +992,11 @@ export class AdminComponent implements OnInit {
   }
 
   private createInitialStates(locales: Locale[]): Record<string, ContentFormState> {
-    return locales.reduce((acc, locale) => {
-      acc[locale] = this.createState(locale);
-      return acc;
-    }, {} as Record<string, ContentFormState>);
+    const states: Record<string, ContentFormState> = {};
+    locales.forEach((locale) => {
+      states[locale] = this.createState(locale);
+    });
+    return states;
   }
 
   private createState(locale: Locale): ContentFormState {
@@ -835,17 +1030,24 @@ export class AdminComponent implements OnInit {
   private humanizeError(err: unknown): string {
     if (typeof err === 'string') return err;
     if (err instanceof Error) return err.message;
-    if (err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string') {
-      return (err as any).message;
+    if (this.isRecord(err)) {
+      const message = err['message'];
+      if (typeof message === 'string') return message;
     }
     return 'Request failed. Check token and try again.';
   }
 
   private leadSortValue(lead: Lead, key: LeadSortKey): string {
-    if (key === 'createdAt' || key === 'exportedAt') {
-      return (lead[key] as string | null | undefined) ?? '';
+    switch (key) {
+      case 'createdAt':
+        return lead.createdAt;
+      case 'exportedAt':
+        return lead.exportedAt ?? '';
+      case 'email':
+        return lead.email.toLowerCase();
+      case 'name':
+        return lead.name?.toLowerCase() ?? '';
     }
-    return (lead[key] as string | null | undefined)?.toLowerCase() ?? '';
   }
 
   private createContentForm(content?: LandingContent, locale: Locale = 'en'): ContentFormGroup {
@@ -1070,31 +1272,6 @@ export class AdminComponent implements OnInit {
     };
   }
 
-  private moveFormArrayItem(array: FormArray<AbstractControl>, from: number, to: number): void {
-    if (from === to) return;
-    const control = array.at(from);
-    if (!control) return;
-    array.removeAt(from);
-    const targetIndex = to >= array.length ? array.length : to;
-    array.insert(targetIndex, control);
-  }
-
-  private getArray(locale: Locale, list: DragList): FormArray<AbstractControl> {
-    const form = this.ensureState(locale).form.controls;
-    switch (list) {
-      case 'heroBullets':
-        return form.hero.controls.bullets as unknown as FormArray<AbstractControl>;
-      case 'painPoints':
-        return form.painPoints as unknown as FormArray<AbstractControl>;
-      case 'features':
-        return form.features as unknown as FormArray<AbstractControl>;
-      case 'metricsStats':
-        return form.metrics.controls.stats as unknown as FormArray<AbstractControl>;
-      case 'howItWorks':
-        return form.howItWorks as unknown as FormArray<AbstractControl>;
-    }
-  }
-
   private heroBullets(locale: Locale): FormArray<FormControl<string>> {
     return this.ensureState(locale).form.controls.hero.controls.bullets;
   }
@@ -1123,5 +1300,52 @@ export class AdminComponent implements OnInit {
     document.body.appendChild(ghost);
     setTimeout(() => ghost.remove(), 0);
     return ghost;
+  }
+
+  private updateLocaleIndex(statuses: LandingLocaleStatus[]): void {
+    const seen = new Set<string>();
+    const mapped: LocaleStatus[] = [];
+    statuses.forEach((item) => {
+      const code = this.normalizeLocale(item.locale);
+      if (!code || seen.has(code)) return;
+      seen.add(code);
+      mapped.push({ code, active: item.active });
+    });
+
+    const sorted = mapped.sort((a, b) => a.code.localeCompare(b.code));
+    const hasEn = sorted.some((item) => item.code === 'en');
+    const list = hasEn ? sorted : [{ code: 'en', active: true }, ...sorted];
+    this.locales.set(list);
+    const active = this.activeLocale();
+    if (!list.some((item) => item.code === active)) {
+      this.activeLocale.set('en');
+    }
+  }
+
+  private upsertLocaleStatus(items: LocaleStatus[], status: LocaleStatus): LocaleStatus[] {
+    if (items.some((item) => item.code === status.code)) {
+      return items.map((item) => (item.code === status.code ? { ...item, active: status.active } : item));
+    }
+    const updated = [...items, status];
+    updated.sort((a, b) => a.code.localeCompare(b.code));
+    const enIndex = updated.findIndex((item) => item.code === 'en');
+    if (enIndex > 0) {
+      const [enItem] = updated.splice(enIndex, 1);
+      updated.unshift(enItem);
+    }
+    return updated;
+  }
+
+  private normalizeLocale(locale: string | null | undefined): string {
+    if (!locale) return 'en';
+    const lower = locale.trim().toLowerCase();
+    const primary = lower.split('-')[0] ?? lower;
+    if (primary === 'uk' || primary === 'ua') return 'ua';
+    if (primary === 'en') return 'en';
+    return primary;
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
   }
 }
