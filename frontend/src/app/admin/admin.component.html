@@ -3,7 +3,7 @@
     <div>
       <p class="eyebrow">VEZHA 360</p>
       <h1>Content admin</h1>
-      <p class="muted">Edit landing copy for EN and UA locales. Changes are saved directly to the backend.</p>
+      <p class="muted">Edit landing copy per locale without touching JSON. Drag blocks to reorder.</p>
     </div>
     <a routerLink="/" class="link">← Back to landing</a>
   </header>
@@ -19,40 +19,462 @@
     </div>
   </section>
 
-  <div class="grid">
-    @for (locale of locales; track locale) {
-      @let state = contentStates[locale];
-      <form class="card locale-card" [formGroup]="state.form" (ngSubmit)="saveLocale(locale)">
-        <div class="card-head">
+  <form class="card content-card" [formGroup]="selectedContent().form" (ngSubmit)="saveLocale(activeLocale())" novalidate>
+    <datalist id="fa-icons-list">
+      @for (icon of iconOptions; track icon) {
+        <option [value]="icon">{{ icon }}</option>
+      }
+    </datalist>
+    <div class="card-head content-head">
+      <div>
+        <p class="eyebrow">Content</p>
+        <h2>Visual content builder</h2>
+        <p class="muted">Select a locale, edit blocks, and drag to reorder list items.</p>
+      </div>
+      <div class="card-actions content-actions">
+        <label class="stacked">
+          <span>Locale</span>
+          <select [value]="activeLocale()" (change)="switchLocale($any($event.target).value)">
+            @for (locale of locales(); track locale) {
+              <option [value]="locale">{{ locale.toUpperCase() }}</option>
+            }
+          </select>
+        </label>
+        <button class="ghost" type="button" (click)="loadLocale(activeLocale())" [disabled]="selectedContent().loading()">
+          {{ selectedContent().loading() ? 'Loading…' : 'Reload' }}
+        </button>
+        <button class="primary" type="submit" [disabled]="selectedContent().saving()">
+          {{ selectedContent().saving() ? 'Saving…' : 'Save content' }}
+        </button>
+      </div>
+      <div class="locale-add" [formGroup]="localeForm">
+        <label>
+          <span>New locale code</span>
+          <input formControlName="newLocale" placeholder="e.g. pl or fr" />
+        </label>
+        <button class="ghost" type="button" (click)="addLocale()" [disabled]="localeForm.invalid">Add locale (copies EN)</button>
+      </div>
+    </div>
+
+    @if (selectedContent().error()) {
+      <div class="banner danger">{{ selectedContent().error() }}</div>
+    }
+    @if (selectedContent().success()) {
+      <div class="banner success">{{ selectedContent().success() }}</div>
+    }
+
+    <div class="editor-grid">
+      <label class="checkbox">
+        <input type="checkbox" formControlName="active" />
+        <span>Locale is active</span>
+      </label>
+
+      <div class="section" formGroupName="hero">
+        <div class="section-head">
           <div>
-            <p class="eyebrow">Locale</p>
-            <h2>{{ locale.toUpperCase() }}</h2>
-          </div>
-          <div class="card-actions">
-            <button class="ghost" type="button" (click)="loadLocale(locale)" [disabled]="state.loading()">
-              {{ state.loading() ? 'Loading...' : 'Reload' }}
-            </button>
-            <button class="primary" type="submit" [disabled]="state.form.invalid || state.saving()">
-              {{ state.saving() ? 'Saving...' : 'Save content' }}
-            </button>
+            <p class="eyebrow">Hero</p>
+            <p class="muted">Headline, CTA, badge, and hero bullet list.</p>
           </div>
         </div>
+        <div class="field-grid two-col">
+          <label>
+            <span>Title</span>
+            <input formControlName="title" />
+          </label>
+          <label>
+            <span>Subtitle</span>
+            <textarea rows="2" formControlName="subtitle"></textarea>
+          </label>
+          <label>
+            <span>Badge</span>
+            <input formControlName="badge" />
+          </label>
+          <label>
+            <span>Price note</span>
+            <input formControlName="priceNote" />
+          </label>
+          <label>
+            <span>Primary CTA</span>
+            <input formControlName="primaryCta" />
+          </label>
+          <label>
+            <span>Telegram label</span>
+            <input formControlName="telegramLabel" />
+          </label>
+          <label>
+            <span>Email label</span>
+            <input formControlName="emailLabel" />
+          </label>
+          <label>
+            <span>Telegram URL</span>
+            <input formControlName="telegramUrl" />
+          </label>
+          <label>
+            <span>Hero email</span>
+            <input formControlName="email" />
+          </label>
+        </div>
+        <div class="list-block">
+          <div class="section-subhead">
+            <div>
+              <p class="eyebrow">Hero bullets</p>
+              <p class="muted">Drag to change order.</p>
+            </div>
+            <button class="ghost" type="button" (click)="addHeroBullet(activeLocale())">Add bullet</button>
+          </div>
+          <div formArrayName="bullets" class="draggable-list">
+            @for (bullet of selectedContent().form.controls.hero.controls.bullets.controls; track bullet) {
+              <div
+                class="draggable-row"
+                draggable="true"
+                (dragstart)="startDrag($event, 'heroBullets', $index, activeLocale())"
+                (dragover)="allowDrop($event)"
+                (drop)="dropItem($event, 'heroBullets', $index, activeLocale())"
+                (dragend)="endDrag()"
+              >
+                <span class="drag-handle" aria-hidden="true">↕</span>
+                <input [formControlName]="$index" placeholder="Bullet text" />
+                <button class="ghost danger" type="button" (click)="removeHeroBullet(activeLocale(), $index)">Delete</button>
+              </div>
+            }
+          </div>
+        </div>
+      </div>
 
+      <div class="section" formArrayName="painPoints">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Pain points</p>
+            <p class="muted">Add, edit, and reorder cards.</p>
+          </div>
+          <button class="ghost" type="button" (click)="addPainPoint(activeLocale())">Add block</button>
+        </div>
+        <div class="block-list">
+          @for (group of selectedContent().form.controls.painPoints.controls; track group) {
+            <div
+              class="block"
+              [formGroupName]="$index"
+              draggable="true"
+              (dragstart)="startDrag($event, 'painPoints', $index, activeLocale())"
+              (dragover)="allowDrop($event)"
+              (drop)="dropItem($event, 'painPoints', $index, activeLocale())"
+              (dragend)="endDrag()"
+            >
+              <div class="block-head">
+                <span class="drag-handle" aria-hidden="true">↕</span>
+                <p class="muted">Block {{ $index + 1 }}</p>
+                <button class="ghost danger" type="button" (click)="removePainPoint(activeLocale(), $index)">Delete</button>
+              </div>
+              <div class="field-grid three-col">
+                <label>
+                  <span>Title</span>
+                  <input formControlName="title" />
+                </label>
+                <label>
+                  <span>Description</span>
+                  <textarea rows="2" formControlName="description"></textarea>
+                </label>
+                <label>
+                  <span>Icon</span>
+                  <div class="icon-input">
+                    <input formControlName="icon" [attr.list]="'fa-icons-list'" placeholder="fa-shield-halved" />
+                    <span class="icon-preview">
+                      @if (isFaIcon(group.controls.icon.value)) {
+                        <i class="fa-solid" [ngClass]="group.controls.icon.value"></i>
+                      } @else {
+                        <span class="icon-text">{{ group.controls.icon.value || '•' }}</span>
+                      }
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="section" formArrayName="features">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Features</p>
+            <p class="muted">Visual list of advantages.</p>
+          </div>
+          <button class="ghost" type="button" (click)="addFeature(activeLocale())">Add feature</button>
+        </div>
+        <div class="block-list">
+          @for (group of selectedContent().form.controls.features.controls; track group) {
+            <div
+              class="block"
+              [formGroupName]="$index"
+              draggable="true"
+              (dragstart)="startDrag($event, 'features', $index, activeLocale())"
+              (dragover)="allowDrop($event)"
+              (drop)="dropItem($event, 'features', $index, activeLocale())"
+              (dragend)="endDrag()"
+            >
+              <div class="block-head">
+                <span class="drag-handle" aria-hidden="true">↕</span>
+                <p class="muted">Block {{ $index + 1 }}</p>
+                <button class="ghost danger" type="button" (click)="removeFeature(activeLocale(), $index)">Delete</button>
+              </div>
+              <div class="field-grid three-col">
+                <label>
+                  <span>Title</span>
+                  <input formControlName="title" />
+                </label>
+                <label>
+                  <span>Description</span>
+                  <textarea rows="2" formControlName="description"></textarea>
+                </label>
+                <label>
+                  <span>Icon</span>
+                  <div class="icon-input">
+                    <input formControlName="icon" [attr.list]="'fa-icons-list'" placeholder="fa-bolt" />
+                    <span class="icon-preview">
+                      @if (isFaIcon(group.controls.icon.value)) {
+                        <i class="fa-solid" [ngClass]="group.controls.icon.value"></i>
+                      } @else {
+                        <span class="icon-text">{{ group.controls.icon.value || '•' }}</span>
+                      }
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="section" formGroupName="comparison">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Comparison</p>
+            <p class="muted">Sysadmin vs Vezha copy.</p>
+          </div>
+        </div>
         <label>
-          <span>Content JSON</span>
-          <textarea rows="22" formControlName="contentJson" spellcheck="false"></textarea>
+          <span>Highlight</span>
+          <input formControlName="highlight" />
         </label>
-        <p class="help">Paste the full content payload for {{ locale.toUpperCase() }}. JSON must match the LandingContent shape.</p>
+        <div class="comparison-grid">
+          <div class="sub-card" formGroupName="sysadmin">
+            <p class="eyebrow">Sysadmin</p>
+            <div class="field-grid two-col">
+              <label>
+                <span>Title</span>
+                <input formControlName="title" />
+              </label>
+              <label>
+                <span>Description</span>
+                <textarea rows="2" formControlName="description"></textarea>
+              </label>
+              <label>
+                <span>Price</span>
+                <input formControlName="price" />
+              </label>
+            </div>
+          </div>
+          <div class="sub-card" formGroupName="vezha">
+            <p class="eyebrow">Vezha</p>
+            <div class="field-grid two-col">
+              <label>
+                <span>Title</span>
+                <input formControlName="title" />
+              </label>
+              <label>
+                <span>Description</span>
+                <textarea rows="2" formControlName="description"></textarea>
+              </label>
+              <label>
+                <span>Price</span>
+                <input formControlName="price" />
+              </label>
+              <label>
+                <span>Badge</span>
+                <input formControlName="badge" />
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
 
-        @if (state.error()) {
-          <div class="banner danger">{{ state.error() }}</div>
-        }
-        @if (state.success()) {
-          <div class="banner success">{{ state.success() }}</div>
-        }
-      </form>
-    }
-  </div>
+      <div class="section" formGroupName="metrics">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Metrics</p>
+            <p class="muted">Stats and proof points.</p>
+          </div>
+          <button class="ghost" type="button" (click)="addMetric(activeLocale())">Add stat</button>
+        </div>
+        <label>
+          <span>Note</span>
+          <input formControlName="note" />
+        </label>
+        <div formArrayName="stats" class="block-list compact">
+          @for (group of selectedContent().form.controls.metrics.controls.stats.controls; track group) {
+            <div
+              class="block"
+              [formGroupName]="$index"
+              draggable="true"
+              (dragstart)="startDrag($event, 'metricsStats', $index, activeLocale())"
+              (dragover)="allowDrop($event)"
+              (drop)="dropItem($event, 'metricsStats', $index, activeLocale())"
+              (dragend)="endDrag()"
+            >
+              <div class="block-head">
+                <span class="drag-handle" aria-hidden="true">↕</span>
+                <p class="muted">Stat {{ $index + 1 }}</p>
+                <button class="ghost danger" type="button" (click)="removeMetric(activeLocale(), $index)">Delete</button>
+              </div>
+              <div class="field-grid two-col">
+                <label>
+                  <span>Label</span>
+                  <input formControlName="label" />
+                </label>
+                <label>
+                  <span>Value</span>
+                  <input formControlName="value" />
+                </label>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="section" formArrayName="howItWorks">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">How it works</p>
+            <p class="muted">Steps for the flow.</p>
+          </div>
+          <button class="ghost" type="button" (click)="addHowItWorks(activeLocale())">Add step</button>
+        </div>
+        <div class="block-list">
+          @for (group of selectedContent().form.controls.howItWorks.controls; track group) {
+            <div
+              class="block"
+              [formGroupName]="$index"
+              draggable="true"
+              (dragstart)="startDrag($event, 'howItWorks', $index, activeLocale())"
+              (dragover)="allowDrop($event)"
+              (drop)="dropItem($event, 'howItWorks', $index, activeLocale())"
+              (dragend)="endDrag()"
+            >
+              <div class="block-head">
+                <span class="drag-handle" aria-hidden="true">↕</span>
+                <p class="muted">Step {{ $index + 1 }}</p>
+                <button class="ghost danger" type="button" (click)="removeHowItWorks(activeLocale(), $index)">Delete</button>
+              </div>
+              <div class="field-grid two-col">
+                <label>
+                  <span>Title</span>
+                  <input formControlName="title" />
+                </label>
+                <label>
+                  <span>Description</span>
+                  <textarea rows="2" formControlName="description"></textarea>
+                </label>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="section" formGroupName="contact">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Contact</p>
+            <p class="muted">CTA copy and form labels.</p>
+          </div>
+        </div>
+        <div class="field-grid two-col">
+          <label>
+            <span>Title</span>
+            <input formControlName="title" />
+          </label>
+          <label>
+            <span>Subtitle</span>
+            <textarea rows="2" formControlName="subtitle"></textarea>
+          </label>
+          <label>
+            <span>Thank you message</span>
+            <input formControlName="thankYou" />
+          </label>
+          <label>
+            <span>Telegram label</span>
+            <input formControlName="telegramLabel" />
+          </label>
+          <label>
+            <span>Telegram URL</span>
+            <input formControlName="telegramUrl" />
+          </label>
+          <label>
+            <span>Email label</span>
+            <input formControlName="emailLabel" />
+          </label>
+          <label>
+            <span>Email</span>
+            <input formControlName="email" />
+          </label>
+        </div>
+
+        <div class="sub-card" formGroupName="form">
+          <p class="eyebrow">Form labels</p>
+          <div class="field-grid three-col">
+            <label>
+              <span>Name label</span>
+              <input formControlName="nameLabel" />
+            </label>
+            <label>
+              <span>Email label</span>
+              <input formControlName="emailLabel" />
+            </label>
+            <label>
+              <span>Phone label</span>
+              <input formControlName="phoneLabel" />
+            </label>
+            <label>
+              <span>Message label</span>
+              <input formControlName="messageLabel" />
+            </label>
+            <label>
+              <span>Submit label</span>
+              <input formControlName="submitLabel" />
+            </label>
+          </div>
+          <div class="field-grid two-col" formGroupName="errors">
+            <label>
+              <span>Email required</span>
+              <input formControlName="requiredEmail" />
+            </label>
+            <label>
+              <span>Email invalid</span>
+              <input formControlName="invalidEmail" />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="section" formGroupName="seo">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">SEO</p>
+            <p class="muted">Title and description tags.</p>
+          </div>
+        </div>
+        <div class="field-grid two-col">
+          <label>
+            <span>SEO title</span>
+            <input formControlName="title" />
+          </label>
+          <label>
+            <span>SEO description</span>
+            <textarea rows="2" formControlName="description"></textarea>
+          </label>
+        </div>
+      </div>
+    </div>
+  </form>
 
   <section class="card leads-card">
     <div class="card-head">

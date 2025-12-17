@@ -12,8 +12,11 @@
     </div>
     <div class="top-actions">
       <div class="lang-switch">
-        <button type="button" [class.active]="activeLang() === 'en'" (click)="switchLang('en')">EN</button>
-        <button type="button" [class.active]="activeLang() === 'ua'" (click)="switchLang('ua')">UA</button>
+        @for (locale of activeLocales(); track locale.code) {
+          <button type="button" [class.active]="activeLang() === locale.code" (click)="switchLang(locale.code)">
+            {{ locale.code.toUpperCase() }}
+          </button>
+        }
       </div>
       <div class="quick-links">
         <a
@@ -89,7 +92,13 @@
       <div class="card-grid">
         @for (risk of copy.painPoints; track risk.title) {
           <article class="card danger-card">
-            <div class="card-icon" [attr.data-icon]="risk.icon"></div>
+            <div class="card-icon">
+              @if (isFaIcon(risk.icon)) {
+                <i class="fa-solid" [ngClass]="risk.icon"></i>
+              } @else {
+                <span class="icon-text">{{ risk.icon || '•' }}</span>
+              }
+            </div>
             <h3>{{ risk.title }}</h3>
             <p>{{ risk.description }}</p>
           </article>
@@ -105,7 +114,13 @@
       <div class="card-grid">
         @for (feature of copy.features; track feature.title) {
           <article class="card feature-card">
-            <div class="card-icon" [attr.data-icon]="feature.icon"></div>
+            <div class="card-icon">
+              @if (isFaIcon(feature.icon)) {
+                <i class="fa-solid" [ngClass]="feature.icon"></i>
+              } @else {
+                <span class="icon-text">{{ feature.icon || '•' }}</span>
+              }
+            </div>
             <h3>{{ feature.title }}</h3>
             <p>{{ feature.description }}</p>
           </article>

@@ -1,4 +1,5 @@
 export type LandingContent = {
+  active?: boolean;
   locale: string;
   hero: {
     title: string;

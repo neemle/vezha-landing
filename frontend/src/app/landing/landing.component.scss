@@ -392,10 +392,12 @@ button,
   color: #3f5940;
 }
 
-.card-icon::after {
-  content: attr(data-icon);
-  text-transform: uppercase;
-  font-size: 0.7rem;
+.card-icon i {
+  font-size: 1.1rem;
+}
+
+.card-icon .icon-text {
+  font-size: 0.9rem;
   letter-spacing: 0.04em;
 }
 

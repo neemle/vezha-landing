@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { LandingContent } from '../models/landing-content.model';
@@ -16,7 +16,12 @@ import { SeoService } from '../services/seo.service';
 })
 export class LandingComponent implements OnInit {
   title = 'VEZHA 360';
-  activeLang = signal<'en' | 'ua'>('en');
+  activeLang = signal<string>('en');
+  locales = signal<Array<{ code: string; active: boolean }>>([
+    { code: 'en', active: true },
+    { code: 'ua', active: true },
+  ]);
+  activeLocales = computed(() => this.locales().filter((locale) => locale.active));
   content = signal<LandingContent | null>(null);
   loading = signal<boolean>(false);
   error = signal<string>('');
@@ -39,8 +44,13 @@ export class LandingComponent implements OnInit {
     this.loadContent(this.activeLang());
   }
 
-  switchLang(lang: 'en' | 'ua'): void {
+  switchLang(lang: string): void {
     if (this.activeLang() === lang) return;
+    if (this.locales().find((item) => item.code === lang && item.active === false)) {
+      this.error.set('Selected language is inactive. Showing English.');
+      this.activeLang.set('en');
+      return;
+    }
     this.activeLang.set(lang);
     this.submitted.set(false);
     this.contactForm.reset();
@@ -73,6 +83,10 @@ export class LandingComponent implements OnInit {
       });
   }
 
+  isFaIcon(value: string | null | undefined): boolean {
+    return !!value && /^fa[a-z-]*-/.test(value.trim());
+  }
+
   private loadContent(lang: string): void {
     this.loading.set(true);
     this.error.set('');
@@ -81,12 +95,36 @@ export class LandingComponent implements OnInit {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (data) => {
+          const isActive = lang === 'en' ? true : data.active !== false;
+          this.markLocale(lang, isActive);
+          if (!isActive && lang !== 'en') {
+            this.error.set('Selected language is inactive. Showing English.');
+            this.activeLang.set('en');
+            this.loadContent('en');
+            return;
+          }
           this.content.set(data);
           this.seo.update(data.seo);
         },
         error: () => {
+          if (lang !== 'en') {
+            this.error.set('Language unavailable. Showing English.');
+            this.activeLang.set('en');
+            this.loadContent('en');
+            return;
+          }
           this.error.set('Failed to load content. Please retry.');
         },
       });
+  }
+
+  private markLocale(code: string, active: boolean): void {
+    this.locales.update((items) => {
+      const existing = items.find((item) => item.code === code);
+      if (existing) {
+        return items.map((item) => (item.code === code ? { ...item, active } : item));
+      }
+      return [...items, { code, active }];
+    });
   }
 }
