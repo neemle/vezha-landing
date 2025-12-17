@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ContentModule } from './content/content.module';
 import { LeadModule } from './lead/lead.module';
 import { AdminModule } from './admin/admin.module';
+import { PagesModule } from './pages/pages.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -25,6 +26,7 @@ import { AppService } from './app.service';
     ContentModule,
     LeadModule,
     AdminModule,
+    PagesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

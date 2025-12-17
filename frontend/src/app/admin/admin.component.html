@@ -476,6 +476,317 @@
     </div>
   </form>
 
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <p class="eyebrow">Pages</p>
+        <h2>Page categories</h2>
+        <p class="help">Categories are translatable with EN fallback. Used to group footer links.</p>
+      </div>
+      <div class="card-actions">
+        <span class="pill muted">{{ activeLocale().toUpperCase() }}</span>
+        <button class="ghost" type="button" (click)="loadPageCategories(activeLocale())" [disabled]="pageCategoriesLoading()">
+          {{ pageCategoriesLoading() ? 'Loading…' : 'Refresh' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="section" [formGroup]="pageCategoryCreateForm">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Create</p>
+          <p class="muted">Create categories in EN first.</p>
+        </div>
+        <button class="primary" type="button" (click)="createPageCategory()" [disabled]="pageCategoriesLoading()">
+          Create category
+        </button>
+      </div>
+      <div class="field-grid three-col">
+        <label>
+          <span>Code</span>
+          <input formControlName="code" placeholder="legal" />
+        </label>
+        <label>
+          <span>Title (EN)</span>
+          <input formControlName="title" placeholder="Legal" />
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" formControlName="active" />
+          <span>Active</span>
+        </label>
+      </div>
+    </div>
+
+    @if (pageCategoriesError()) {
+      <div class="banner danger">{{ pageCategoriesError() }}</div>
+    }
+    @if (pageCategoriesSuccess()) {
+      <div class="banner success">{{ pageCategoriesSuccess() }}</div>
+    }
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Active</th>
+            <th>Code</th>
+            <th>Title</th>
+            <th>Locale</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (pageCategoriesLoading()) {
+            <tr>
+              <td colspan="5" class="center muted">Loading categories…</td>
+            </tr>
+          } @else if (pageCategories().length === 0) {
+            <tr>
+              <td colspan="5" class="center muted">No categories yet.</td>
+            </tr>
+          } @else {
+            @for (category of pageCategories(); track category.id) {
+              <tr>
+                <td>
+                  <input
+                    #catActive
+                    type="checkbox"
+                    [checked]="category.active"
+                    (change)="togglePageCategoryActive(category, catActive.checked)"
+                  />
+                </td>
+                <td class="mono">{{ category.code }}</td>
+                <td>{{ category.title }}</td>
+                <td>
+                  <span class="pill" [class.muted]="category.titleLocale !== activeLocale()">
+                    {{ category.titleLocale.toUpperCase() }}
+                  </span>
+                </td>
+                <td>
+                  <button class="ghost" type="button" (click)="selectPageCategory(category)">Edit translation</button>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (selectedPageCategory(); as selectedCategory) {
+      <div class="section" [formGroup]="pageCategoryTranslationForm">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Translation</p>
+            <p class="muted">
+              Editing <span class="mono">{{ selectedCategory.code }}</span> for {{ activeLocale().toUpperCase() }}.
+            </p>
+          </div>
+          <button class="primary" type="button" (click)="savePageCategoryTranslation()" [disabled]="pageCategoriesLoading()">
+            Save translation
+          </button>
+        </div>
+        @if (selectedCategory.titleLocale !== activeLocale()) {
+          <div class="banner info">Currently showing EN fallback. Saving will create a translation for this locale.</div>
+        }
+        <div class="field-grid two-col">
+          <label>
+            <span>Title</span>
+            <input formControlName="title" />
+          </label>
+        </div>
+      </div>
+    }
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div>
+        <p class="eyebrow">Pages</p>
+        <h2>Static pages</h2>
+        <p class="help">Create pages in EN first, then add translations per locale.</p>
+      </div>
+      <div class="card-actions">
+        <span class="pill muted">{{ activeLocale().toUpperCase() }}</span>
+        <button class="ghost" type="button" (click)="loadStaticPages(activeLocale())" [disabled]="staticPagesLoading()">
+          {{ staticPagesLoading() ? 'Loading…' : 'Refresh' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="section" [formGroup]="staticPageCreateForm">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Create</p>
+          <p class="muted">Slug is used as the URL: /slug</p>
+        </div>
+        <button class="primary" type="button" (click)="createStaticPage()" [disabled]="staticPagesLoading()">
+          Create page (EN)
+        </button>
+      </div>
+      <div class="field-grid three-col">
+        <label>
+          <span>Slug</span>
+          <input formControlName="slug" placeholder="about" />
+        </label>
+        <label>
+          <span>Category</span>
+          <select formControlName="categoryId">
+            <option [ngValue]="0">Select…</option>
+            @for (category of pageCategories(); track category.id) {
+              <option [ngValue]="category.id">{{ category.title }}</option>
+            }
+          </select>
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" formControlName="published" />
+          <span>Published</span>
+        </label>
+      </div>
+      <div class="field-grid two-col">
+        <label>
+          <span>Title (EN)</span>
+          <input formControlName="title" placeholder="About" />
+        </label>
+        <label>
+          <span>Content (EN HTML)</span>
+          <textarea rows="6" formControlName="content" placeholder="<p>About us…</p>"></textarea>
+        </label>
+      </div>
+    </div>
+
+    @if (staticPagesError()) {
+      <div class="banner danger">{{ staticPagesError() }}</div>
+    }
+    @if (staticPagesSuccess()) {
+      <div class="banner success">{{ staticPagesSuccess() }}</div>
+    }
+    @if (selectedStaticPageLoading()) {
+      <div class="banner info">Loading selected page…</div>
+    }
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Published</th>
+            <th>Slug</th>
+            <th>Category</th>
+            <th>Title</th>
+            <th>Locale</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @if (staticPagesLoading()) {
+            <tr>
+              <td colspan="6" class="center muted">Loading pages…</td>
+            </tr>
+          } @else if (staticPages().length === 0) {
+            <tr>
+              <td colspan="6" class="center muted">No pages yet.</td>
+            </tr>
+          } @else {
+            @for (page of staticPages(); track page.id) {
+              <tr>
+                <td>
+                  <input
+                    #pagePublished
+                    type="checkbox"
+                    [checked]="page.published"
+                    (change)="toggleStaticPagePublished(page, pagePublished.checked)"
+                  />
+                </td>
+                <td class="mono">{{ page.slug }}</td>
+                <td>{{ page.category.title }}</td>
+                <td>{{ page.title }}</td>
+                <td>
+                  <span class="pill" [class.muted]="page.titleLocale !== activeLocale()">
+                    {{ page.titleLocale.toUpperCase() }}
+                  </span>
+                </td>
+                <td>
+                  <button class="ghost" type="button" (click)="selectStaticPage(page)">Edit</button>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (selectedStaticPage(); as selectedPage) {
+      <div class="section">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Editor</p>
+            <p class="muted">
+              Editing <span class="mono">/{{ selectedPage.slug }}</span> for {{ activeLocale().toUpperCase() }}.
+            </p>
+          </div>
+          <a class="link" [href]="'/' + selectedPage.slug + '?lang=' + activeLocale()" target="_blank" rel="noopener">
+            Preview
+          </a>
+        </div>
+
+        <div class="section" [formGroup]="staticPageBaseForm">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Base</p>
+              <p class="muted">Slug, category, and publish state.</p>
+            </div>
+            <button class="primary" type="button" (click)="saveStaticPageBase()" [disabled]="selectedStaticPageLoading()">
+              Save base
+            </button>
+          </div>
+          <div class="field-grid three-col">
+            <label>
+              <span>Slug</span>
+              <input formControlName="slug" />
+            </label>
+            <label>
+              <span>Category</span>
+              <select formControlName="categoryId">
+                <option [ngValue]="0">Select…</option>
+                @for (category of pageCategories(); track category.id) {
+                  <option [ngValue]="category.id">{{ category.title }}</option>
+                }
+              </select>
+            </label>
+            <label class="checkbox">
+              <input type="checkbox" formControlName="published" />
+              <span>Published</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="section" [formGroup]="staticPageTranslationForm">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Translation</p>
+              <p class="muted">Title and content for {{ activeLocale().toUpperCase() }}.</p>
+            </div>
+            <button class="primary" type="button" (click)="saveStaticPageTranslation()" [disabled]="selectedStaticPageLoading()">
+              Save translation
+            </button>
+          </div>
+          @if (selectedPage.translationLocale !== activeLocale()) {
+            <div class="banner info">Currently showing EN fallback. Saving will create a translation for this locale.</div>
+          }
+          <div class="field-grid two-col">
+            <label>
+              <span>Title</span>
+              <input formControlName="title" />
+            </label>
+            <label>
+              <span>Content (HTML)</span>
+              <textarea rows="8" formControlName="content"></textarea>
+            </label>
+          </div>
+        </div>
+      </div>
+    }
+  </section>
+
   <section class="card leads-card">
     <div class="card-head">
       <div>

@@ -1,0 +1,46 @@
+<div class="page">
+  <header class="topbar">
+    <a routerLink="/" class="brand">
+      <div class="logo-mark" aria-hidden="true">
+        <span class="tower"></span>
+        <span class="flag"></span>
+      </div>
+      <div class="brand-copy">
+        <div class="name">VEZHA 360</div>
+        <div class="tagline">{{ activeLang() === 'ua' ? 'Сторінка' : 'Page' }}</div>
+      </div>
+    </a>
+    <div class="top-actions">
+      <div class="lang-switch">
+        @for (locale of locales(); track locale.code) {
+          <button type="button" [class.active]="activeLang() === locale.code" (click)="switchLang(locale.code)">
+            {{ locale.code.toUpperCase() }}
+          </button>
+        }
+      </div>
+      <a routerLink="/" class="link">{{ activeLang() === 'ua' ? '← На головну' : '← Back' }}</a>
+    </div>
+  </header>
+
+  @if (loading() && !page()) {
+    <div class="banner info">Loading...</div>
+  }
+  @if (error()) {
+    <div class="banner danger">{{ error() }}</div>
+  }
+
+  @if (page(); as p) {
+    <article class="card page-card">
+      <h1>{{ p.title }}</h1>
+      @if (p.locale !== activeLang()) {
+        <p class="muted fallback-note">
+          {{ activeLang() === 'ua' ? 'Показано англійську версію (fallback).' : 'Showing English fallback.' }}
+        </p>
+      }
+      <div class="page-content" [innerHTML]="p.content"></div>
+    </article>
+  }
+
+  <app-site-footer [lang]="activeLang()"></app-site-footer>
+</div>
+

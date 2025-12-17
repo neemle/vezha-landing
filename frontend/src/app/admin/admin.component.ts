@@ -11,6 +11,7 @@ import {
 } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
+import { AdminPageCategory, AdminStaticPage, AdminStaticPageListItem } from '../models/admin-pages.model';
 import { LandingContent } from '../models/landing-content.model';
 import { Lead } from '../models/lead.model';
 import { AdminService, LeadExportFilter } from '../services/admin.service';
@@ -87,6 +88,35 @@ type ContentFormState = {
   loaded: WritableSignal<boolean>;
 };
 
+type CategoryCreateFormGroup = FormGroup<{
+  code: FormControl<string>;
+  title: FormControl<string>;
+  active: FormControl<boolean>;
+}>;
+
+type CategoryTranslationFormGroup = FormGroup<{
+  title: FormControl<string>;
+}>;
+
+type PageCreateFormGroup = FormGroup<{
+  slug: FormControl<string>;
+  categoryId: FormControl<number>;
+  published: FormControl<boolean>;
+  title: FormControl<string>;
+  content: FormControl<string>;
+}>;
+
+type PageBaseFormGroup = FormGroup<{
+  slug: FormControl<string>;
+  categoryId: FormControl<number>;
+  published: FormControl<boolean>;
+}>;
+
+type PageTranslationFormGroup = FormGroup<{
+  title: FormControl<string>;
+  content: FormControl<string>;
+}>;
+
 @Component({
   selector: 'app-admin',
   standalone: true,
@@ -137,9 +167,57 @@ export class AdminComponent implements OnInit {
     newLocale: ['', [Validators.required, Validators.pattern('^[a-zA-Z-]{2,8}$')]],
   });
 
+  readonly pageCategoryCreateForm: CategoryCreateFormGroup = this.fb.nonNullable.group({
+    code: ['', [Validators.required, Validators.pattern('^[a-z0-9]+(?:-[a-z0-9]+)*$')]],
+    title: ['', Validators.required],
+    active: [true],
+  });
+
+  readonly pageCategoryTranslationForm: CategoryTranslationFormGroup = this.fb.nonNullable.group({
+    title: ['', Validators.required],
+  });
+
+  readonly staticPageCreateForm: PageCreateFormGroup = this.fb.nonNullable.group({
+    slug: ['', [Validators.required, Validators.pattern('^[a-z0-9]+(?:-[a-z0-9]+)*$')]],
+    categoryId: [0, [Validators.required, Validators.min(1)]],
+    published: [false],
+    title: ['', Validators.required],
+    content: ['', Validators.required],
+  });
+
+  readonly staticPageBaseForm: PageBaseFormGroup = this.fb.nonNullable.group({
+    slug: ['', [Validators.required, Validators.pattern('^[a-z0-9]+(?:-[a-z0-9]+)*$')]],
+    categoryId: [0, [Validators.required, Validators.min(1)]],
+    published: [false],
+  });
+
+  readonly staticPageTranslationForm: PageTranslationFormGroup = this.fb.nonNullable.group({
+    title: ['', Validators.required],
+    content: ['', Validators.required],
+  });
+
   private readonly contentStates: Record<string, ContentFormState> = this.createInitialStates(['en', 'ua']);
 
   readonly selectedContent = computed(() => this.ensureState(this.activeLocale()));
+
+  readonly pageCategories = signal<AdminPageCategory[]>([]);
+  readonly pageCategoriesLoading = signal(false);
+  readonly pageCategoriesError = signal('');
+  readonly pageCategoriesSuccess = signal('');
+  readonly selectedPageCategoryId = signal<number | null>(null);
+  readonly selectedPageCategory = computed(() => {
+    const id = this.selectedPageCategoryId();
+    if (!id) return null;
+    return this.pageCategories().find((item) => item.id === id) ?? null;
+  });
+
+  readonly staticPages = signal<AdminStaticPageListItem[]>([]);
+  readonly staticPagesLoading = signal(false);
+  readonly staticPagesError = signal('');
+  readonly staticPagesSuccess = signal('');
+  readonly selectedStaticPageId = signal<number | null>(null);
+  readonly selectedStaticPage = signal<AdminStaticPage | null>(null);
+  readonly selectedStaticPageLoading = signal(false);
 
   readonly leadFilters = signal<{ exported: LeadExportFilter; includeBad: boolean; search: string }>({
     exported: 'all',
@@ -174,6 +252,8 @@ export class AdminComponent implements OnInit {
     const token = this.admin.token();
     if (token) {
       this.loadLocale(this.activeLocale());
+      this.loadPageCategories(this.activeLocale());
+      this.loadStaticPages(this.activeLocale());
       this.loadLeads();
     }
   }
@@ -184,6 +264,11 @@ export class AdminComponent implements OnInit {
     if (token && !this.selectedContent().loaded()) {
       this.loadLocale(this.activeLocale());
     }
+    if (token) {
+      this.loadPageCategories(this.activeLocale());
+      this.loadStaticPages(this.activeLocale());
+      this.loadLeads();
+    }
   }
 
   switchLocale(locale: Locale): void {
@@ -192,6 +277,13 @@ export class AdminComponent implements OnInit {
     if (!this.ensureState(locale).loaded() && this.admin.token()) {
       this.loadLocale(locale);
     }
+    if (this.admin.token()) {
+      this.loadPageCategories(locale);
+      this.loadStaticPages(locale);
+    }
+    this.selectedPageCategoryId.set(null);
+    this.selectedStaticPageId.set(null);
+    this.selectedStaticPage.set(null);
   }
 
   addLocale(): void {
@@ -215,6 +307,10 @@ export class AdminComponent implements OnInit {
     newState.success.set('Locale created from EN fallback.');
     this.locales.update((list) => [...list, code]);
     this.activeLocale.set(code);
+    if (this.admin.token()) {
+      this.loadPageCategories(code);
+      this.loadStaticPages(code);
+    }
     this.localeForm.reset({ newLocale: '' });
   }
 
@@ -263,6 +359,284 @@ export class AdminComponent implements OnInit {
       .subscribe({
         next: () => state.success.set('Content saved.'),
         error: (err) => state.error.set(this.humanizeError(err)),
+      });
+  }
+
+  loadPageCategories(locale: Locale): void {
+    this.pageCategoriesLoading.set(true);
+    this.pageCategoriesError.set('');
+    this.pageCategoriesSuccess.set('');
+    const token = this.ensureToken();
+    if (!token) {
+      this.pageCategoriesLoading.set(false);
+      this.pageCategoriesError.set('Admin token is required to load categories.');
+      return;
+    }
+    this.admin
+      .listPageCategories(locale)
+      .pipe(finalize(() => this.pageCategoriesLoading.set(false)))
+      .subscribe({
+        next: (categories) => {
+          this.pageCategories.set(categories);
+          this.pageCategoriesSuccess.set(`Loaded ${categories.length} categories.`);
+        },
+        error: (err) => this.pageCategoriesError.set(this.humanizeError(err)),
+      });
+  }
+
+  createPageCategory(): void {
+    this.pageCategoriesError.set('');
+    this.pageCategoriesSuccess.set('');
+    if (this.pageCategoryCreateForm.invalid) {
+      this.pageCategoryCreateForm.markAllAsTouched();
+      return;
+    }
+    const token = this.ensureToken();
+    if (!token) {
+      this.pageCategoriesError.set('Admin token is required to create categories.');
+      return;
+    }
+    const raw = this.pageCategoryCreateForm.getRawValue();
+    this.pageCategoriesLoading.set(true);
+    this.admin
+      .createPageCategory({ code: raw.code.trim(), title: raw.title.trim(), active: raw.active })
+      .pipe(finalize(() => this.pageCategoriesLoading.set(false)))
+      .subscribe({
+        next: () => {
+          this.pageCategoryCreateForm.reset({ code: '', title: '', active: true });
+          this.pageCategoriesSuccess.set('Category created.');
+          this.loadPageCategories(this.activeLocale());
+        },
+        error: (err) => this.pageCategoriesError.set(this.humanizeError(err)),
+      });
+  }
+
+  selectPageCategory(category: AdminPageCategory): void {
+    this.selectedPageCategoryId.set(category.id);
+    this.pageCategoryTranslationForm.reset({ title: category.title });
+  }
+
+  savePageCategoryTranslation(): void {
+    this.pageCategoriesError.set('');
+    this.pageCategoriesSuccess.set('');
+    const selected = this.selectedPageCategory();
+    if (!selected) {
+      this.pageCategoriesError.set('Select a category first.');
+      return;
+    }
+    if (this.pageCategoryTranslationForm.invalid) {
+      this.pageCategoryTranslationForm.markAllAsTouched();
+      return;
+    }
+    const token = this.ensureToken();
+    if (!token) {
+      this.pageCategoriesError.set('Admin token is required to save category translations.');
+      return;
+    }
+    const locale = this.activeLocale();
+    const title = this.pageCategoryTranslationForm.controls.title.value.trim();
+    this.pageCategoriesLoading.set(true);
+    this.admin
+      .upsertPageCategoryTranslation(selected.id, { locale, title }, locale)
+      .pipe(finalize(() => this.pageCategoriesLoading.set(false)))
+      .subscribe({
+        next: () => {
+          this.pageCategoriesSuccess.set('Category translation saved.');
+          this.loadPageCategories(locale);
+        },
+        error: (err) => this.pageCategoriesError.set(this.humanizeError(err)),
+      });
+  }
+
+  togglePageCategoryActive(category: AdminPageCategory, active: boolean): void {
+    this.pageCategoriesError.set('');
+    const token = this.ensureToken();
+    if (!token) return;
+    const locale = this.activeLocale();
+    this.pageCategoriesLoading.set(true);
+    this.admin
+      .updatePageCategory(category.id, { active }, locale)
+      .pipe(finalize(() => this.pageCategoriesLoading.set(false)))
+      .subscribe({
+        next: () => this.loadPageCategories(locale),
+        error: (err) => this.pageCategoriesError.set(this.humanizeError(err)),
+      });
+  }
+
+  loadStaticPages(locale: Locale): void {
+    this.staticPagesLoading.set(true);
+    this.staticPagesError.set('');
+    this.staticPagesSuccess.set('');
+    const token = this.ensureToken();
+    if (!token) {
+      this.staticPagesLoading.set(false);
+      this.staticPagesError.set('Admin token is required to load pages.');
+      return;
+    }
+    this.admin
+      .listPages(locale)
+      .pipe(finalize(() => this.staticPagesLoading.set(false)))
+      .subscribe({
+        next: (pages) => {
+          this.staticPages.set(pages);
+          this.staticPagesSuccess.set(`Loaded ${pages.length} pages.`);
+        },
+        error: (err) => this.staticPagesError.set(this.humanizeError(err)),
+      });
+  }
+
+  selectStaticPage(page: AdminStaticPageListItem): void {
+    this.selectedStaticPageId.set(page.id);
+    this.loadStaticPage(page.id, this.activeLocale());
+  }
+
+  createStaticPage(): void {
+    this.staticPagesError.set('');
+    this.staticPagesSuccess.set('');
+    if (this.staticPageCreateForm.invalid) {
+      this.staticPageCreateForm.markAllAsTouched();
+      return;
+    }
+    const token = this.ensureToken();
+    if (!token) {
+      this.staticPagesError.set('Admin token is required to create pages.');
+      return;
+    }
+    const raw = this.staticPageCreateForm.getRawValue();
+    this.staticPagesLoading.set(true);
+    this.admin
+      .createPage({
+        slug: raw.slug.trim(),
+        categoryId: raw.categoryId,
+        published: raw.published,
+        title: raw.title.trim(),
+        content: raw.content.trim(),
+      })
+      .pipe(finalize(() => this.staticPagesLoading.set(false)))
+      .subscribe({
+        next: (created) => {
+          this.staticPageCreateForm.reset({ slug: '', categoryId: 0, published: false, title: '', content: '' });
+          this.staticPagesSuccess.set('Page created.');
+          this.loadStaticPages(this.activeLocale());
+          this.selectedStaticPageId.set(created.id);
+          this.loadStaticPage(created.id, this.activeLocale());
+        },
+        error: (err) => this.staticPagesError.set(this.humanizeError(err)),
+      });
+  }
+
+  saveStaticPageBase(): void {
+    this.staticPagesError.set('');
+    this.staticPagesSuccess.set('');
+    const selected = this.selectedStaticPage();
+    if (!selected) {
+      this.staticPagesError.set('Select a page first.');
+      return;
+    }
+    if (this.staticPageBaseForm.invalid) {
+      this.staticPageBaseForm.markAllAsTouched();
+      return;
+    }
+    const token = this.ensureToken();
+    if (!token) {
+      this.staticPagesError.set('Admin token is required to save pages.');
+      return;
+    }
+    const locale = this.activeLocale();
+    const raw = this.staticPageBaseForm.getRawValue();
+    this.selectedStaticPageLoading.set(true);
+    this.admin
+      .updatePage(
+        selected.id,
+        { slug: raw.slug.trim(), categoryId: raw.categoryId, published: raw.published },
+        locale,
+      )
+      .pipe(finalize(() => this.selectedStaticPageLoading.set(false)))
+      .subscribe({
+        next: (updated) => {
+          this.selectedStaticPage.set(updated);
+          this.staticPageBaseForm.reset({ slug: updated.slug, categoryId: updated.categoryId, published: updated.published });
+          this.staticPageTranslationForm.reset({ title: updated.title, content: updated.content });
+          this.staticPagesSuccess.set('Page updated.');
+          this.loadStaticPages(locale);
+        },
+        error: (err) => this.staticPagesError.set(this.humanizeError(err)),
+      });
+  }
+
+  saveStaticPageTranslation(): void {
+    this.staticPagesError.set('');
+    this.staticPagesSuccess.set('');
+    const selected = this.selectedStaticPage();
+    if (!selected) {
+      this.staticPagesError.set('Select a page first.');
+      return;
+    }
+    if (this.staticPageTranslationForm.invalid) {
+      this.staticPageTranslationForm.markAllAsTouched();
+      return;
+    }
+    const token = this.ensureToken();
+    if (!token) {
+      this.staticPagesError.set('Admin token is required to save translations.');
+      return;
+    }
+    const locale = this.activeLocale();
+    const raw = this.staticPageTranslationForm.getRawValue();
+    this.selectedStaticPageLoading.set(true);
+    this.admin
+      .upsertPageTranslation(selected.id, { locale, title: raw.title.trim(), content: raw.content.trim() })
+      .pipe(finalize(() => this.selectedStaticPageLoading.set(false)))
+      .subscribe({
+        next: (updated) => {
+          this.selectedStaticPage.set(updated);
+          this.staticPageTranslationForm.reset({ title: updated.title, content: updated.content });
+          this.staticPagesSuccess.set('Translation saved.');
+          this.loadStaticPages(locale);
+        },
+        error: (err) => this.staticPagesError.set(this.humanizeError(err)),
+      });
+  }
+
+  toggleStaticPagePublished(page: AdminStaticPageListItem, published: boolean): void {
+    this.staticPagesError.set('');
+    const token = this.ensureToken();
+    if (!token) return;
+    const locale = this.activeLocale();
+    this.staticPagesLoading.set(true);
+    this.admin
+      .updatePage(page.id, { published }, locale)
+      .pipe(finalize(() => this.staticPagesLoading.set(false)))
+      .subscribe({
+        next: () => {
+          this.loadStaticPages(locale);
+          if (this.selectedStaticPageId() === page.id) {
+            this.loadStaticPage(page.id, locale);
+          }
+        },
+        error: (err) => this.staticPagesError.set(this.humanizeError(err)),
+      });
+  }
+
+  private loadStaticPage(id: number, locale: Locale): void {
+    this.selectedStaticPageLoading.set(true);
+    this.staticPagesError.set('');
+    const token = this.ensureToken();
+    if (!token) {
+      this.selectedStaticPageLoading.set(false);
+      this.staticPagesError.set('Admin token is required to load pages.');
+      return;
+    }
+    this.admin
+      .getPage(id, locale)
+      .pipe(finalize(() => this.selectedStaticPageLoading.set(false)))
+      .subscribe({
+        next: (page) => {
+          this.selectedStaticPage.set(page);
+          this.staticPageBaseForm.reset({ slug: page.slug, categoryId: page.categoryId, published: page.published });
+          this.staticPageTranslationForm.reset({ title: page.title, content: page.content });
+        },
+        error: (err) => this.staticPagesError.set(this.humanizeError(err)),
       });
   }
 

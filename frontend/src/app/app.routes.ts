@@ -9,5 +9,9 @@ export const routes: Routes = [
     path: 'admin',
     loadComponent: () => import('./admin/admin.component').then((m) => m.AdminComponent),
   },
+  {
+    path: ':slug',
+    loadComponent: () => import('./static-page/static-page.component').then((m) => m.StaticPageComponent),
+  },
   { path: '**', redirectTo: '' },
 ];

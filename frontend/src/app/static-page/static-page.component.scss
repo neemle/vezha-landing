@@ -1,0 +1,171 @@
+:host {
+  display: block;
+  background: #f6f3ef;
+  color: #53493e;
+  font-family: 'Montserrat', 'Ubuntu', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem clamp(1rem, 2vw, 2.25rem) 3rem;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: #fff;
+  border: 1px solid #e2d9cf;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(39, 32, 25, 0.06);
+  position: sticky;
+  top: 0.75rem;
+  z-index: 10;
+  gap: 1rem;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.logo-mark {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #3f5940, #2f442f);
+  display: grid;
+  place-items: center;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.15), 0 8px 20px rgba(19, 28, 19, 0.25);
+}
+
+.logo-mark .tower {
+  width: 16px;
+  height: 22px;
+  border: 3px solid #f6f3ef;
+  border-bottom-width: 5px;
+  border-radius: 5px 5px 3px 3px;
+  position: relative;
+}
+
+.logo-mark .tower::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  width: 12px;
+  height: 6px;
+  background: #f6f3ef;
+  transform: translateX(-50%);
+  border-radius: 3px;
+}
+
+.logo-mark .flag {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  width: 12px;
+  height: 6px;
+  background: #b68b41;
+  clip-path: polygon(0 0, 100% 0, 70% 50%, 100% 100%, 0 100%);
+}
+
+.brand-copy .name {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.brand-copy .tagline {
+  font-size: 0.9rem;
+  color: #7a6d60;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.lang-switch {
+  display: flex;
+  gap: 0.25rem;
+  background: #f0e9df;
+  padding: 0.25rem;
+  border-radius: 12px;
+}
+
+.lang-switch button {
+  border: none;
+  background: transparent;
+  padding: 0.4rem 0.75rem;
+  border-radius: 10px;
+  cursor: pointer;
+  color: #53493e;
+  font-weight: 600;
+}
+
+.lang-switch button.active {
+  background: #3f5940;
+  color: #f6f3ef;
+}
+
+.link {
+  color: #3f5940;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.banner {
+  margin: 1.25rem 0;
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  border: 1px solid #e2d9cf;
+  background: #fff;
+}
+
+.banner.danger {
+  border-color: rgba(160, 77, 67, 0.35);
+  background: rgba(160, 77, 67, 0.08);
+  color: #872c22;
+}
+
+.banner.info {
+  border-color: rgba(63, 89, 64, 0.25);
+  background: rgba(63, 89, 64, 0.08);
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #e2d9cf;
+  border-radius: 18px;
+  padding: 1.5rem 1.25rem;
+  box-shadow: 0 14px 40px rgba(36, 28, 17, 0.08);
+}
+
+.page-card h1 {
+  margin: 0 0 0.75rem;
+  letter-spacing: 0.02em;
+}
+
+.muted {
+  color: #7a6d60;
+}
+
+.fallback-note {
+  margin: 0 0 1rem;
+}
+
+.page-content :first-child {
+  margin-top: 0;
+}
+
+.page-content :last-child {
+  margin-bottom: 0;
+}
+

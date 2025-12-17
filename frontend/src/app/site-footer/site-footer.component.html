@@ -1,0 +1,20 @@
+@if (footer(); as data) {
+  @if (data.categories.length) {
+    <footer class="footer">
+      <div class="footer-grid">
+        @for (category of data.categories; track category.code) {
+          <div class="footer-col">
+            <div class="footer-title">{{ category.title }}</div>
+            <nav class="footer-links">
+              @for (page of category.pages; track page.slug) {
+                <a [routerLink]="['/', page.slug]" [queryParams]="{ lang: currentLang() }" class="footer-link">
+                  {{ page.title }}
+                </a>
+              }
+            </nav>
+          </div>
+        }
+      </div>
+    </footer>
+  }
+}

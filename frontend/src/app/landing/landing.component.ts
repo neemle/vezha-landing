@@ -1,16 +1,18 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { LandingContent } from '../models/landing-content.model';
 import { ContentService } from '../services/content.service';
 import { LeadService } from '../services/lead.service';
 import { SeoService } from '../services/seo.service';
+import { SiteFooterComponent } from '../site-footer/site-footer.component';
 
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, SiteFooterComponent],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.scss'
 })
@@ -32,6 +34,8 @@ export class LandingComponent implements OnInit {
   private readonly contentService = inject(ContentService);
   private readonly leadService = inject(LeadService);
   private readonly seo = inject(SeoService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   contactForm = this.fb.nonNullable.group({
     name: [''],
@@ -41,6 +45,8 @@ export class LandingComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    const fromUrl = this.route.snapshot.queryParamMap.get('lang');
+    if (fromUrl) this.activeLang.set(fromUrl.trim());
     this.loadContent(this.activeLang());
   }
 
@@ -52,6 +58,12 @@ export class LandingComponent implements OnInit {
       return;
     }
     this.activeLang.set(lang);
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { lang },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
     this.submitted.set(false);
     this.contactForm.reset();
     this.loadContent(lang);

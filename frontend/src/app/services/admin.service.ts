@@ -3,6 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { Observable } from 'rxjs';
 import { LandingContent } from '../models/landing-content.model';
 import { Lead } from '../models/lead.model';
+import { AdminPageCategory, AdminStaticPage, AdminStaticPageListItem } from '../models/admin-pages.model';
 
 export type LeadExportFilter = 'all' | 'exported' | 'unexported';
 
@@ -61,6 +62,70 @@ export class AdminService {
       headers,
       responseType: 'text',
     });
+  }
+
+  listPageCategories(locale: string): Observable<AdminPageCategory[]> {
+    const headers = this.requireAuthHeaders();
+    return this.http.get<AdminPageCategory[]>(`${this.apiBase}/admin/page-categories`, { headers, params: { locale } });
+  }
+
+  createPageCategory(payload: { code: string; title: string; active?: boolean }): Observable<AdminPageCategory> {
+    const headers = this.requireAuthHeaders();
+    return this.http.post<AdminPageCategory>(`${this.apiBase}/admin/page-categories`, payload, { headers });
+  }
+
+  updatePageCategory(id: number, payload: { active?: boolean }, locale: string): Observable<AdminPageCategory> {
+    const headers = this.requireAuthHeaders();
+    return this.http.patch<AdminPageCategory>(`${this.apiBase}/admin/page-categories/${id}`, payload, {
+      headers,
+      params: { locale },
+    });
+  }
+
+  upsertPageCategoryTranslation(
+    id: number,
+    payload: { locale: string; title: string },
+    responseLocale: string,
+  ): Observable<AdminPageCategory> {
+    const headers = this.requireAuthHeaders();
+    return this.http.put<AdminPageCategory>(`${this.apiBase}/admin/page-categories/${id}/translations`, payload, {
+      headers,
+      params: { locale: responseLocale },
+    });
+  }
+
+  listPages(locale: string): Observable<AdminStaticPageListItem[]> {
+    const headers = this.requireAuthHeaders();
+    return this.http.get<AdminStaticPageListItem[]>(`${this.apiBase}/admin/pages`, { headers, params: { locale } });
+  }
+
+  getPage(id: number, locale: string): Observable<AdminStaticPage> {
+    const headers = this.requireAuthHeaders();
+    return this.http.get<AdminStaticPage>(`${this.apiBase}/admin/pages/${id}`, { headers, params: { locale } });
+  }
+
+  createPage(payload: {
+    slug: string;
+    categoryId: number;
+    published?: boolean;
+    title: string;
+    content: string;
+  }): Observable<AdminStaticPage> {
+    const headers = this.requireAuthHeaders();
+    return this.http.post<AdminStaticPage>(`${this.apiBase}/admin/pages`, payload, { headers });
+  }
+
+  updatePage(id: number, payload: { slug?: string; categoryId?: number; published?: boolean }, locale: string): Observable<AdminStaticPage> {
+    const headers = this.requireAuthHeaders();
+    return this.http.patch<AdminStaticPage>(`${this.apiBase}/admin/pages/${id}`, payload, { headers, params: { locale } });
+  }
+
+  upsertPageTranslation(
+    id: number,
+    payload: { locale: string; title: string; content: string },
+  ): Observable<AdminStaticPage> {
+    const headers = this.requireAuthHeaders();
+    return this.http.put<AdminStaticPage>(`${this.apiBase}/admin/pages/${id}/translations`, payload, { headers });
   }
 
   private requireAuthHeaders(): HttpHeaders {

@@ -1,0 +1,37 @@
+.footer {
+  margin-top: 2.5rem;
+  padding: 1.75rem 1.25rem;
+  border-radius: 20px;
+  border: 1px solid #e2d9cf;
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(36, 28, 17, 0.08);
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.25rem;
+}
+
+.footer-title {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #3f5940;
+  margin-bottom: 0.75rem;
+}
+
+.footer-links {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.footer-link {
+  color: #53493e;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.footer-link:hover {
+  text-decoration: underline;
+}
+
