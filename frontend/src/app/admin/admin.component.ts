@@ -21,6 +21,7 @@ type Locale = string;
 type LocaleStatus = { code: Locale; active: boolean };
 type AdminTab = 'setup' | 'leads';
 type SetupTab = 'main-page' | 'content';
+type HtmlEditorState = { title: string; html: string; target: FormControl<string> };
 type LeadSortKey = 'createdAt' | 'email' | 'name' | 'exportedAt';
 type DragList = 'heroBullets' | 'painPoints' | 'features' | 'metricsStats' | 'howItWorks';
 type DragContext = { list: DragList; from: number; locale: Locale };
@@ -132,6 +133,9 @@ export class AdminComponent implements OnInit {
   private readonly admin = inject(AdminService);
   private readonly fb = inject(FormBuilder);
   private readonly contentService = inject(ContentService);
+
+  readonly htmlEditor = signal<HtmlEditorState | null>(null);
+  private savedHtmlSelection: Range | null = null;
 
   readonly adminTab = signal<AdminTab>('setup');
   readonly setupTab = signal<SetupTab>('main-page');
@@ -277,6 +281,58 @@ export class AdminComponent implements OnInit {
       this.loadLocaleIndex();
       this.loadForCurrentView();
     }
+  }
+
+  openHtmlEditor(title: string, control: FormControl<string>): void {
+    this.savedHtmlSelection = null;
+    this.htmlEditor.set({ title, target: control, html: control.value ?? '' });
+  }
+
+  closeHtmlEditor(): void {
+    this.savedHtmlSelection = null;
+    this.htmlEditor.set(null);
+  }
+
+  saveHtmlEditor(html: string): void {
+    const state = this.htmlEditor();
+    if (!state) return;
+    state.target.setValue(html);
+    state.target.markAsDirty();
+    state.target.markAsTouched();
+    this.closeHtmlEditor();
+  }
+
+  saveHtmlSelection(surface: HTMLElement): void {
+    if (typeof window === 'undefined') return;
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    const element = container instanceof Element ? container : container.parentElement;
+    if (!element) return;
+    if (!surface.contains(element)) return;
+    this.savedHtmlSelection = range.cloneRange();
+  }
+
+  execHtmlCommand(command: string, surface: HTMLElement, value?: string): void {
+    surface.focus();
+    this.restoreHtmlSelection();
+    document.execCommand(command, false, value);
+    this.saveHtmlSelection(surface);
+  }
+
+  execHtmlFormatBlock(tag: string, surface: HTMLElement): void {
+    this.execHtmlCommand('formatBlock', surface, tag);
+  }
+
+  execHtmlLink(surface: HTMLElement): void {
+    if (typeof window === 'undefined') return;
+    const url = window.prompt('Enter URL', 'https://');
+    if (!url) return;
+    surface.focus();
+    this.restoreHtmlSelection();
+    document.execCommand('createLink', false, url);
+    this.saveHtmlSelection(surface);
   }
 
   selectAdminTab(tab: AdminTab): void {
@@ -1347,5 +1403,14 @@ export class AdminComponent implements OnInit {
 
   private isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  private restoreHtmlSelection(): void {
+    if (!this.savedHtmlSelection) return;
+    if (typeof window === 'undefined') return;
+    const selection = window.getSelection();
+    if (!selection) return;
+    selection.removeAllRanges();
+    selection.addRange(this.savedHtmlSelection);
   }
 }

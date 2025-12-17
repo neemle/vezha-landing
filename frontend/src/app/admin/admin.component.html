@@ -734,8 +734,17 @@
           <span>Title (EN)</span>
           <input formControlName="title" placeholder="About" />
         </label>
-        <label>
-          <span>Content (EN HTML)</span>
+        <label class="html-field">
+          <div class="field-head">
+            <span>Content (EN HTML)</span>
+            <button
+              type="button"
+              class="ghost small rich-trigger"
+              (click)="openHtmlEditor('Create page content (EN)', staticPageCreateForm.controls.content)"
+            >
+              Rich edit
+            </button>
+          </div>
           <textarea rows="6" formControlName="content" placeholder="<p>About us…</p>"></textarea>
         </label>
       </div>
@@ -864,8 +873,17 @@
               <span>Title</span>
               <input formControlName="title" />
             </label>
-            <label>
-              <span>Content (HTML)</span>
+            <label class="html-field">
+              <div class="field-head">
+                <span>Content (HTML)</span>
+                <button
+                  type="button"
+                  class="ghost small rich-trigger"
+                  (click)="openHtmlEditor('Page translation content', staticPageTranslationForm.controls.content)"
+                >
+                  Rich edit
+                </button>
+              </div>
               <textarea rows="8" formControlName="content"></textarea>
             </label>
           </div>
@@ -990,5 +1008,53 @@
       </table>
     </div>
   </section>
+  }
+
+  @if (htmlEditor(); as editorState) {
+    <div class="modal-backdrop" role="presentation" (click)="closeHtmlEditor()">
+      <div class="modal html-editor-modal" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Rich editor</p>
+            <h2>{{ editorState.title }}</h2>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="ghost" (click)="closeHtmlEditor()">Cancel</button>
+            <button type="button" class="primary" (click)="saveHtmlEditor(htmlEditorSurface.innerHTML)">Save</button>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <button type="button" class="ghost small" (click)="execHtmlCommand('undo', htmlEditorSurface)">Undo</button>
+          <button type="button" class="ghost small" (click)="execHtmlCommand('redo', htmlEditorSurface)">Redo</button>
+          <span class="toolbar-sep" aria-hidden="true"></span>
+          <button type="button" class="ghost small" (click)="execHtmlCommand('bold', htmlEditorSurface)"><span class="mono">B</span></button>
+          <button type="button" class="ghost small" (click)="execHtmlCommand('italic', htmlEditorSurface)"><span class="mono">I</span></button>
+          <button type="button" class="ghost small" (click)="execHtmlCommand('underline', htmlEditorSurface)"><span class="mono">U</span></button>
+          <span class="toolbar-sep" aria-hidden="true"></span>
+          <button type="button" class="ghost small" (click)="execHtmlFormatBlock('<p>', htmlEditorSurface)">P</button>
+          <button type="button" class="ghost small" (click)="execHtmlFormatBlock('<h2>', htmlEditorSurface)">H2</button>
+          <button type="button" class="ghost small" (click)="execHtmlFormatBlock('<h3>', htmlEditorSurface)">H3</button>
+          <button type="button" class="ghost small" (click)="execHtmlFormatBlock('<blockquote>', htmlEditorSurface)">Quote</button>
+          <button type="button" class="ghost small" (click)="execHtmlFormatBlock('<pre>', htmlEditorSurface)">Code</button>
+          <span class="toolbar-sep" aria-hidden="true"></span>
+          <button type="button" class="ghost small" (click)="execHtmlCommand('insertUnorderedList', htmlEditorSurface)">• List</button>
+          <button type="button" class="ghost small" (click)="execHtmlCommand('insertOrderedList', htmlEditorSurface)">1. List</button>
+          <span class="toolbar-sep" aria-hidden="true"></span>
+          <button type="button" class="ghost small" (click)="execHtmlLink(htmlEditorSurface)">Link</button>
+          <button type="button" class="ghost small" (click)="execHtmlCommand('unlink', htmlEditorSurface)">Unlink</button>
+          <button type="button" class="ghost small" (click)="execHtmlCommand('removeFormat', htmlEditorSurface)">Clear</button>
+        </div>
+
+        <div
+          #htmlEditorSurface
+          class="editor-surface"
+          contenteditable="true"
+          [innerHTML]="editorState.html"
+          (keyup)="saveHtmlSelection(htmlEditorSurface)"
+          (mouseup)="saveHtmlSelection(htmlEditorSurface)"
+        ></div>
+      </div>
+    </div>
   }
 </div>

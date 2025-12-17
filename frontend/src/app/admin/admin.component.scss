@@ -208,6 +208,12 @@ button,
   transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.2s ease;
 }
 
+.small {
+  padding: 0.45rem 0.65rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
 .primary {
   background: linear-gradient(120deg, #3f5940, #4f6b4f);
   color: #f6f3ef;
@@ -302,6 +308,91 @@ textarea {
 .list-block {
   display: grid;
   gap: 0.45rem;
+}
+
+.html-field .field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(39, 32, 25, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  z-index: 1000;
+}
+
+.modal {
+  width: min(980px, 100%);
+  max-height: min(84vh, 860px);
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid #e2d9cf;
+  box-shadow: 0 30px 80px rgba(39, 32, 25, 0.25);
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  overflow: hidden;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1rem 0.75rem;
+  border-bottom: 1px solid #f1ece5;
+}
+
+.modal-head h2 {
+  margin: 0.25rem 0 0;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.6rem 1rem;
+  background: #fbf8f3;
+  border-bottom: 1px solid #f1ece5;
+  align-items: center;
+}
+
+.toolbar-sep {
+  width: 1px;
+  height: 22px;
+  background: #d6c9bc;
+  margin: 0 0.15rem;
+}
+
+.editor-surface {
+  padding: 1rem;
+  overflow: auto;
+  line-height: 1.55;
+  font-size: 1rem;
+}
+
+.editor-surface:focus {
+  outline: none;
+}
+
+.editor-surface :first-child {
+  margin-top: 0;
+}
+
+.editor-surface :last-child {
+  margin-bottom: 0;
 }
 
 .draggable-list {

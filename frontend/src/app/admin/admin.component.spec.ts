@@ -286,5 +286,99 @@ describe('AdminComponent (tabs + locales)', () => {
     expect(component.activeLocale()).toBe('pl');
     expect(component.locales().some((locale) => locale.code === 'pl')).toBeTrue();
   });
-});
 
+  it('opens rich editor modal for HTML fields and writes back to the form control', () => {
+    const fixture = TestBed.createComponent(AdminComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+
+    const localeIndexReq = httpMock.expectOne((req) => req.url === '/api/content/locales');
+    localeIndexReq.flush([
+      { locale: 'en', active: true },
+      { locale: 'ua', active: true },
+    ]);
+
+    const contentReq = httpMock.expectOne((req) => req.url === '/api/admin/content' && req.params.get('locale') === 'en');
+    contentReq.flush({
+      locale: 'en',
+      active: true,
+      hero: {
+        title: 'Title',
+        subtitle: 'Subtitle',
+        priceNote: 'Price',
+        badge: 'Badge',
+        bullets: [],
+        primaryCta: 'CTA',
+        telegramLabel: 'Telegram',
+        emailLabel: 'Email',
+        telegramUrl: 'https://example.com',
+        email: 'support@example.com',
+      },
+      painPoints: [],
+      features: [],
+      comparison: {
+        highlight: 'Highlight',
+        sysadmin: { title: 'Sys', description: 'Desc', price: '$20' },
+        vezha: { title: 'Vezha', description: 'Desc', price: '$5', badge: 'Best' },
+      },
+      metrics: { note: 'Note', stats: [] },
+      howItWorks: [],
+      contact: {
+        title: 'Contact',
+        subtitle: 'Subtitle',
+        thankYou: 'Thanks',
+        telegramLabel: 'Telegram',
+        telegramUrl: 'https://example.com',
+        emailLabel: 'Email',
+        email: 'support@example.com',
+        form: {
+          nameLabel: 'Name',
+          emailLabel: 'Email',
+          phoneLabel: 'Phone',
+          messageLabel: 'Message',
+          submitLabel: 'Submit',
+          errors: { requiredEmail: 'Required', invalidEmail: 'Invalid' },
+        },
+      },
+      seo: { title: 'SEO', description: 'Desc' },
+    });
+
+    fixture.detectChanges();
+
+    const setupNav: HTMLElement = fixture.nativeElement.querySelector('nav[aria-label="Setup sections"]');
+    const contentButton = Array.from(setupNav.querySelectorAll('button')).find(
+      (button) => (button.textContent ?? '').trim() === 'Content',
+    );
+    if (!contentButton) throw new Error('Content tab button not found');
+    contentButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    const categoriesReq = httpMock.expectOne((req) => req.url === '/api/admin/page-categories' && req.params.get('locale') === 'en');
+    categoriesReq.flush([]);
+    const pagesReq = httpMock.expectOne((req) => req.url === '/api/admin/pages' && req.params.get('locale') === 'en');
+    pagesReq.flush([]);
+
+    fixture.detectChanges();
+
+    const trigger: HTMLButtonElement | null = fixture.nativeElement.querySelector('button.rich-trigger');
+    if (!trigger) throw new Error('Rich edit trigger not found');
+    trigger.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(component.htmlEditor()).not.toBeNull();
+
+    const modal: HTMLElement | null = fixture.nativeElement.querySelector('.html-editor-modal');
+    if (!modal) throw new Error('HTML editor modal not opened');
+    const surface: HTMLElement | null = modal.querySelector('.editor-surface');
+    if (!surface) throw new Error('HTML editor surface not found');
+    surface.innerHTML = '<p><strong>Hello</strong></p>';
+
+    const saveButton: HTMLButtonElement | null = modal.querySelector('.modal-actions button.primary');
+    if (!saveButton) throw new Error('Save button not found');
+    saveButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    fixture.detectChanges();
+
+    expect(component.htmlEditor()).toBeNull();
+    expect(component.staticPageCreateForm.controls.content.value).toBe('<p><strong>Hello</strong></p>');
+  });
+});
