@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LandingContentEntity } from './landing-content.entity';
 import { DEFAULT_CONTENT, LandingContentPayload } from './default-content';
+import { LibreTranslateService } from './libre-translate.service';
 
 export type LandingLocaleStatus = { locale: string; active: boolean };
 
@@ -13,6 +14,7 @@ export class ContentService {
   constructor(
     @InjectRepository(LandingContentEntity)
     private readonly contentRepo: Repository<LandingContentEntity>,
+    private readonly libreTranslate: LibreTranslateService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -56,6 +58,218 @@ export class ContentService {
     await this.contentRepo.save(entity);
     this.logger.log(`Stored content for locale ${normalized}`);
     return withLocale;
+  }
+
+  async createDraftLocale(targetLocale: string, sourceLocale?: string): Promise<LandingContentPayload> {
+    const normalizedTarget = this.normalizeLocale(targetLocale);
+    const normalizedSource = this.normalizeLocale(sourceLocale ?? 'en');
+    if (normalizedTarget === normalizedSource) {
+      throw new BadRequestException('Target locale must differ from source locale');
+    }
+
+    const existingTarget = await this.contentRepo.findOne({ where: { locale: normalizedTarget } });
+    if (existingTarget) {
+      throw new BadRequestException('Locale already exists');
+    }
+
+    const sourcePayload = await this.getContent(normalizedSource);
+    const resolvedSourceLocale = this.normalizeLocale(sourcePayload.locale);
+
+    try {
+      const translated = await this.translateLandingContent(sourcePayload, resolvedSourceLocale, normalizedTarget);
+      const draft: LandingContentPayload & { active: boolean } = { ...translated, active: false };
+      return await this.upsertContent(normalizedTarget, draft);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to create draft locale ${normalizedTarget}: ${message}`);
+      throw new BadGatewayException('Failed to translate content');
+    }
+  }
+
+  private async translateLandingContent(
+    sourcePayload: LandingContentPayload,
+    sourceLocale: string,
+    targetLocale: string,
+  ): Promise<LandingContentPayload> {
+    const texts = this.collectTranslatableStrings(sourcePayload);
+    const translatedTexts = await this.libreTranslate.translateTexts(texts, sourceLocale, targetLocale);
+    return this.applyTranslations(sourcePayload, translatedTexts, targetLocale);
+  }
+
+  private collectTranslatableStrings(payload: LandingContentPayload): string[] {
+    const texts: string[] = [];
+
+    texts.push(payload.hero.title);
+    texts.push(payload.hero.subtitle);
+    texts.push(payload.hero.priceNote);
+    texts.push(payload.hero.badge);
+    for (const bullet of payload.hero.bullets) {
+      texts.push(bullet);
+    }
+    texts.push(payload.hero.primaryCta);
+    texts.push(payload.hero.telegramLabel);
+    texts.push(payload.hero.emailLabel);
+
+    for (const point of payload.painPoints) {
+      texts.push(point.title);
+      texts.push(point.description);
+    }
+
+    for (const feature of payload.features) {
+      texts.push(feature.title);
+      texts.push(feature.description);
+    }
+
+    texts.push(payload.comparison.highlight);
+    texts.push(payload.comparison.sysadmin.title);
+    texts.push(payload.comparison.sysadmin.description);
+    texts.push(payload.comparison.vezha.title);
+    texts.push(payload.comparison.vezha.description);
+    texts.push(payload.comparison.vezha.badge);
+
+    texts.push(payload.metrics.note);
+    for (const stat of payload.metrics.stats) {
+      texts.push(stat.label);
+    }
+
+    for (const step of payload.howItWorks) {
+      texts.push(step.title);
+      texts.push(step.description);
+    }
+
+    texts.push(payload.contact.title);
+    texts.push(payload.contact.subtitle);
+    texts.push(payload.contact.thankYou);
+    texts.push(payload.contact.telegramLabel);
+    texts.push(payload.contact.emailLabel);
+
+    texts.push(payload.contact.form.nameLabel);
+    texts.push(payload.contact.form.emailLabel);
+    texts.push(payload.contact.form.phoneLabel);
+    texts.push(payload.contact.form.messageLabel);
+    texts.push(payload.contact.form.submitLabel);
+    texts.push(payload.contact.form.errors.requiredEmail);
+    texts.push(payload.contact.form.errors.invalidEmail);
+
+    texts.push(payload.seo.title);
+    texts.push(payload.seo.description);
+
+    return texts;
+  }
+
+  private applyTranslations(
+    sourcePayload: LandingContentPayload,
+    translatedTexts: string[],
+    targetLocale: string,
+  ): LandingContentPayload {
+    let index = 0;
+    const next = (label: string): string => {
+      const value = translatedTexts[index];
+      if (value === undefined) {
+        throw new Error(`Missing translated value for ${label}`);
+      }
+      index += 1;
+      return value;
+    };
+
+    const hero = {
+      ...sourcePayload.hero,
+      title: next('hero.title'),
+      subtitle: next('hero.subtitle'),
+      priceNote: next('hero.priceNote'),
+      badge: next('hero.badge'),
+      bullets: sourcePayload.hero.bullets.map((_, bulletIndex) => next(`hero.bullets[${bulletIndex}]`)),
+      primaryCta: next('hero.primaryCta'),
+      telegramLabel: next('hero.telegramLabel'),
+      emailLabel: next('hero.emailLabel'),
+    };
+
+    const painPoints = sourcePayload.painPoints.map((point, pointIndex) => ({
+      ...point,
+      title: next(`painPoints[${pointIndex}].title`),
+      description: next(`painPoints[${pointIndex}].description`),
+    }));
+
+    const features = sourcePayload.features.map((feature, featureIndex) => ({
+      ...feature,
+      title: next(`features[${featureIndex}].title`),
+      description: next(`features[${featureIndex}].description`),
+    }));
+
+    const comparison = {
+      ...sourcePayload.comparison,
+      highlight: next('comparison.highlight'),
+      sysadmin: {
+        ...sourcePayload.comparison.sysadmin,
+        title: next('comparison.sysadmin.title'),
+        description: next('comparison.sysadmin.description'),
+      },
+      vezha: {
+        ...sourcePayload.comparison.vezha,
+        title: next('comparison.vezha.title'),
+        description: next('comparison.vezha.description'),
+        badge: next('comparison.vezha.badge'),
+      },
+    };
+
+    const metrics = {
+      ...sourcePayload.metrics,
+      note: next('metrics.note'),
+      stats: sourcePayload.metrics.stats.map((stat, statIndex) => ({
+        ...stat,
+        label: next(`metrics.stats[${statIndex}].label`),
+      })),
+    };
+
+    const howItWorks = sourcePayload.howItWorks.map((step, stepIndex) => ({
+      ...step,
+      title: next(`howItWorks[${stepIndex}].title`),
+      description: next(`howItWorks[${stepIndex}].description`),
+    }));
+
+    const contact = {
+      ...sourcePayload.contact,
+      title: next('contact.title'),
+      subtitle: next('contact.subtitle'),
+      thankYou: next('contact.thankYou'),
+      telegramLabel: next('contact.telegramLabel'),
+      emailLabel: next('contact.emailLabel'),
+      form: {
+        ...sourcePayload.contact.form,
+        nameLabel: next('contact.form.nameLabel'),
+        emailLabel: next('contact.form.emailLabel'),
+        phoneLabel: next('contact.form.phoneLabel'),
+        messageLabel: next('contact.form.messageLabel'),
+        submitLabel: next('contact.form.submitLabel'),
+        errors: {
+          ...sourcePayload.contact.form.errors,
+          requiredEmail: next('contact.form.errors.requiredEmail'),
+          invalidEmail: next('contact.form.errors.invalidEmail'),
+        },
+      },
+    };
+
+    const seo = {
+      ...sourcePayload.seo,
+      title: next('seo.title'),
+      description: next('seo.description'),
+    };
+
+    if (index !== translatedTexts.length) {
+      throw new Error(`Unused translated values: expected ${translatedTexts.length}, got ${index}`);
+    }
+
+    return {
+      locale: targetLocale,
+      hero,
+      painPoints,
+      features,
+      comparison,
+      metrics,
+      howItWorks,
+      contact,
+      seo,
+    };
   }
 
   private parsePayload(raw: string): LandingContentPayload {

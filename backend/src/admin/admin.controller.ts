@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseIntPipe, Patch, Put, Query, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post, Put, Query, Res, UseGuards } from '@nestjs/common';
 import {
   ApiBody,
   ApiHeader,
@@ -13,6 +13,7 @@ import type { Response } from 'express';
 import { ContentService } from '../content/content.service';
 import { LeadService } from '../lead/lead.service';
 import { UpdateContentDto } from '../content/dto/update-content.dto';
+import { CreateDraftLocaleDto } from '../content/dto/create-draft-locale.dto';
 import { AdminGuard } from './admin.guard';
 import { LeadEntity } from '../lead/lead.entity';
 import { UpdateLeadFlagDto } from '../lead/dto/update-lead-flag.dto';
@@ -42,6 +43,14 @@ export class AdminController {
   @Put('content')
   updateContent(@Body() dto: UpdateContentDto) {
     return this.contentService.upsertContent(dto.locale, dto.content);
+  }
+
+  @ApiOperation({ summary: 'Create a draft locale by auto-translating existing content' })
+  @ApiOkResponse({ description: 'Draft content payload stored for the new locale (active=false)' })
+  @ApiBody({ type: CreateDraftLocaleDto })
+  @Post('content/locales')
+  createDraftLocale(@Body() dto: CreateDraftLocaleDto) {
+    return this.contentService.createDraftLocale(dto.locale, dto.sourceLocale);
   }
 
   @ApiOperation({ summary: 'List submitted leads' })
