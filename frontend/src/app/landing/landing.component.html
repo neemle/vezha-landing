@@ -4,18 +4,13 @@
       <img class="logo" src="assets/images/logo.svg" alt="VEZHA" />
     </a>
     <nav class="nav-links">
-      <a class="nav-link" href="#hero">
-        {{ activeLang() === 'ua' ? 'Про нас' : 'About us' }}
-      </a>
-      <a class="nav-link" href="#features">
-        {{ activeLang() === 'ua' ? 'Можливості' : 'Use Cases' }}
-      </a>
-      <a class="nav-link" href="#metrics">
-        {{ activeLang() === 'ua' ? 'Гарантії' : 'Guarantees' }}
-      </a>
-      <a class="nav-link" (click)="scrollToContact(); $event.preventDefault()" href="#contact">
-        {{ activeLang() === 'ua' ? 'Контакти' : 'Contacts' }}
-      </a>
+      @if (content(); as c) {
+        @for (item of c.nav; track item.target) {
+          <a class="nav-link" (click)="scrollTo(item.target); $event.preventDefault()" [attr.href]="'#' + item.target">
+            {{ item.label }}
+          </a>
+        }
+      }
     </nav>
     <div class="top-actions">
       <div class="lang-switch">
@@ -53,7 +48,7 @@
         <div class="hero-text">
           <h1>{{ copy.hero.title }}</h1>
           <p class="subtitle">{{ copy.hero.subtitle }}</p>
-          <button class="btn-primary" type="button" (click)="scrollToContact()">
+          <button class="btn-primary" type="button" (click)="scrollTo('contact')">
             {{ copy.hero.primaryCta }}
           </button>
         </div>
@@ -70,12 +65,8 @@
     <section class="section-block pain" id="pain">
       <div class="container">
         <div class="section-heading">
-          <span class="eyebrow">
-            {{ activeLang() === 'ua' ? 'Що може піти не так' : 'What can go wrong' }}
-          </span>
-          <h2>
-            {{ activeLang() === 'ua' ? 'РИЗИКИ БЕЗ МОНІТОРИНГУ' : 'RISKS WITHOUT MONITORING' }}
-          </h2>
+          <span class="eyebrow">{{ copy.sections.pain.eyebrow }}</span>
+          <h2>{{ copy.sections.pain.heading }}</h2>
         </div>
         <div class="pain-grid">
           @for (risk of copy.painPoints; track risk.title; let i = $index) {
@@ -104,8 +95,8 @@
             }
           }
           <article class="card cta-card">
-            <h3>{{ activeLang() === 'ua' ? 'ГОТОВІ ПОЧАТИ?' : 'READY TO START?' }}</h3>
-            <button class="btn-primary" type="button" (click)="scrollToContact()">
+            <h3>{{ copy.sections.pain.ctaTitle }}</h3>
+            <button class="btn-primary" type="button" (click)="scrollTo('contact')">
               {{ copy.hero.primaryCta }}
             </button>
           </article>
@@ -116,12 +107,8 @@
     <section class="section-block features" id="features">
       <div class="container">
         <div class="section-heading">
-          <span class="eyebrow">
-            {{ activeLang() === 'ua' ? 'Можливості' : 'Capabilities' }}
-          </span>
-          <h2>
-            {{ activeLang() === 'ua' ? 'ЯК ВЕЖА 360 ЗАХИЩАЄ' : 'HOW VEZHA 360 PROTECTS' }}
-          </h2>
+          <span class="eyebrow">{{ copy.sections.features.eyebrow }}</span>
+          <h2>{{ copy.sections.features.heading }}</h2>
         </div>
         <div class="features-grid">
           @for (feature of copy.features; track feature.title) {
@@ -139,7 +126,7 @@
           }
         </div>
         <div class="section-cta">
-          <button class="btn-primary" type="button" (click)="scrollToContact()">
+          <button class="btn-primary" type="button" (click)="scrollTo('contact')">
             {{ copy.hero.primaryCta }}
           </button>
         </div>
@@ -150,11 +137,7 @@
       <div class="container">
         <div class="section-heading">
           <span class="eyebrow">{{ copy.comparison.highlight }}</span>
-          <h2>
-            {{ activeLang() === 'ua'
-              ? 'КРАЩЕ ЗА СИСТЕМНОГО АДМІНІСТРАТОРА'
-              : 'BETTER THAN A SYSADMIN' }}
-          </h2>
+          <h2>{{ copy.sections.comparison.heading }}</h2>
         </div>
         <div class="comparison-card">
           <img
@@ -174,7 +157,7 @@
               <div class="pill pill-accent">{{ copy.comparison.vezha.badge }}</div>
               <p class="comparison-title">{{ copy.comparison.vezha.title }}</p>
               <p class="comparison-desc">{{ copy.comparison.vezha.description }}</p>
-              <button class="btn-primary" type="button" (click)="scrollToContact()">
+              <button class="btn-primary" type="button" (click)="scrollTo('contact')">
                 {{ copy.hero.primaryCta }}
               </button>
             </div>
@@ -186,14 +169,8 @@
     <section class="section-block metrics" id="metrics">
       <div class="container">
         <div class="section-heading">
-          <span class="eyebrow">
-            {{ activeLang() === 'ua' ? 'Можете довіряти' : 'So you can trust' }}
-          </span>
-          <h2>
-            {{ activeLang() === 'ua'
-              ? 'ЗАВЖДИ НА ВАРТІ, НАВІТЬ ВНОЧІ ТА У СВЯТА'
-              : 'ALWAYS ON DUTY, EVEN AT NIGHT AND ON HOLIDAYS' }}
-          </h2>
+          <span class="eyebrow">{{ copy.sections.metrics.eyebrow }}</span>
+          <h2>{{ copy.sections.metrics.heading }}</h2>
         </div>
         <div class="stats-grid">
           @for (stat of copy.metrics.stats; track stat.label) {
@@ -209,11 +186,9 @@
     <section class="section-block how-section" id="how">
       <div class="container how-layout">
         <div class="how-left">
-          <span class="eyebrow eyebrow-light">
-            {{ activeLang() === 'ua' ? '4 прості кроки' : '4 simple steps' }}
-          </span>
-          <h2>{{ activeLang() === 'ua' ? 'ЯК ЦЕ ПРАЦЮЄ' : 'HOW IT WORKS' }}</h2>
-          <button class="btn-primary" type="button" (click)="scrollToContact()">
+          <span class="eyebrow eyebrow-light">{{ copy.sections.howItWorks.eyebrow }}</span>
+          <h2>{{ copy.sections.howItWorks.heading }}</h2>
+          <button class="btn-primary" type="button" (click)="scrollTo('contact')">
             {{ copy.hero.primaryCta }}
           </button>
         </div>
@@ -232,9 +207,7 @@
     <section class="section-block contact-section" id="contact">
       <div class="container contact-layout">
         <div class="contact-text">
-          <span class="eyebrow eyebrow-light">
-            {{ activeLang() === 'ua' ? 'Готові почати' : 'Ready Start' }}
-          </span>
+          <span class="eyebrow eyebrow-light">{{ copy.sections.contact.eyebrow }}</span>
           <h2>{{ copy.contact.title }}</h2>
           <p class="contact-subtitle">{{ copy.contact.subtitle }}</p>
         </div>
@@ -268,9 +241,7 @@
             [placeholder]="copy.contact.form.messageLabel"
           ></textarea>
           <button class="btn-primary btn-wide" type="submit" [disabled]="submitting()">
-            {{ submitting()
-              ? (activeLang() === 'ua' ? 'Надсилаємо...' : 'Sending...')
-              : copy.contact.form.submitLabel }}
+            {{ submitting() ? copy.sections.submitting : copy.contact.form.submitLabel }}
           </button>
           @if (submitted()) {
             <div class="success-msg">{{ copy.contact.thankYou }}</div>

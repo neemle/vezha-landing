@@ -20,8 +20,8 @@
 
 **Non-goals:**
 
-- Node.js SEA (Single Executable Application) — not viable: sqlite3 native addon must remain on disk, swagger-ui-express serves static files from node_modules, and the app serves frontend files from disk. SEA is designed for self-contained CLI tools, not web servers with external file dependencies.
-- Distroless base — not viable: sqlite3 native addon requires musl libc + libstdc++ from Alpine; distroless nodejs images are glibc-based Debian, causing ABI mismatch.
+- Node.js SEA (Single Executable Application) — deferred to SDD-004 (now implemented). With sql.js replacing sqlite3, the native addon blocker was removed.
+- Distroless base — deferred to SDD-004 (now implemented). With sql.js replacing sqlite3 and SEA built on glibc (node:24-slim), distroless cc-debian13 is viable.
 - Full test suite implementation (separate task)
 - CI pipeline changes
 
@@ -59,31 +59,39 @@
 After `nest build` (tsc), esbuild bundles the compiled JS into a single minified file (3.4MB).
 Externals (must remain in node_modules at runtime):
 
-- `sqlite3` — native addon (.node binary)
-- `swagger-ui-express` + `swagger-ui-dist` — serves static HTML/CSS/JS from package dir
+- `sql.js` — SQLite compiled to WASM (pure JS, no native addons)
+- `swagger-ui-express` + `swagger-ui-dist` — disabled in production (dev only)
 - `@nestjs/microservices`, `@nestjs/websockets`, `@nestjs/platform-fastify` — optional NestJS packages (try/require)
 - `@fastify/static` — optional dependency of @nestjs/serve-static
 - `class-transformer/storage` — optional import in @nestjs/mapped-types
 
-### Image size breakdown (187MB total)
+### SQLite migration: sqlite3 → sql.js
+
+Replaced native `sqlite3` (C++ addon via node-gyp) with `sql.js` (SQLite compiled to WebAssembly).
+TypeORM has a built-in `sqljs` driver — change `type: 'sqlite'` to `type: 'sqljs'` with `autoSave: true`.
+Eliminates all native addons, enabling future SEA builds.
+
+### Swagger UI: production disabled
+
+Swagger UI setup (`swagger-ui-express` + `swagger-ui-dist`) conditionally loaded only when `NODE_ENV !== 'production'`.
+Eliminates ~8MB of swagger static assets from production image.
+
+### Image size breakdown (175MB total)
 
 | Component | Size |
 |-----------|------|
 | Alpine base + libstdc++ + libgcc | ~12MB |
 | Node binary (stripped) | 101MB |
-| node_modules (sqlite3 + swagger-ui only) | 8.5MB |
+| node_modules (sql.js WASM only) | 0.9MB |
 | Backend bundle + frontend dist | 5.1MB |
 
-### Why not SEA
+### SEA readiness
 
-Node.js SEA requires all code embedded in the binary. This app has:
-
-1. sqlite3 native `.node` addon — must be loaded from disk via `process.dlopen()`
-2. swagger-ui-express — reads static HTML/CSS/JS from `swagger-ui-dist` on disk
-3. Frontend static files — served from disk by @nestjs/serve-static
-4. SEA is stability 1.1 (experimental)
-
-The esbuild bundling alone reduced node_modules from 64MB to 8.5MB, achieving the same practical benefit.
+With sql.js (pure WASM) replacing sqlite3 (native addon), the main blocker for Node.js SEA is removed.
+Remaining considerations for future SEA implementation:
+1. WASM binary (`sql-wasm.wasm`, 648KB) needs to be embedded as SEA asset
+2. Frontend static files need to be embedded or served separately
+3. SEA is stability 1.1 (experimental) in Node.js
 
 ## Test Matrix (mandatory)
 

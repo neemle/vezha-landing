@@ -151,6 +151,23 @@ export class ContentService {
     texts.push(payload.contact.form.errors.requiredEmail);
     texts.push(payload.contact.form.errors.invalidEmail);
 
+    for (const navItem of payload.nav) {
+      texts.push(navItem.label);
+    }
+
+    texts.push(payload.sections.pain.eyebrow);
+    texts.push(payload.sections.pain.heading);
+    texts.push(payload.sections.pain.ctaTitle);
+    texts.push(payload.sections.features.eyebrow);
+    texts.push(payload.sections.features.heading);
+    texts.push(payload.sections.comparison.heading);
+    texts.push(payload.sections.metrics.eyebrow);
+    texts.push(payload.sections.metrics.heading);
+    texts.push(payload.sections.howItWorks.eyebrow);
+    texts.push(payload.sections.howItWorks.heading);
+    texts.push(payload.sections.contact.eyebrow);
+    texts.push(payload.sections.submitting);
+
     texts.push(payload.seo.title);
     texts.push(payload.seo.description);
 
@@ -249,6 +266,38 @@ export class ContentService {
       },
     };
 
+    const nav = sourcePayload.nav.map((item, navIndex) => ({
+      ...item,
+      label: next(`nav[${navIndex}].label`),
+    }));
+
+    const sections = {
+      pain: {
+        eyebrow: next('sections.pain.eyebrow'),
+        heading: next('sections.pain.heading'),
+        ctaTitle: next('sections.pain.ctaTitle'),
+      },
+      features: {
+        eyebrow: next('sections.features.eyebrow'),
+        heading: next('sections.features.heading'),
+      },
+      comparison: {
+        heading: next('sections.comparison.heading'),
+      },
+      metrics: {
+        eyebrow: next('sections.metrics.eyebrow'),
+        heading: next('sections.metrics.heading'),
+      },
+      howItWorks: {
+        eyebrow: next('sections.howItWorks.eyebrow'),
+        heading: next('sections.howItWorks.heading'),
+      },
+      contact: {
+        eyebrow: next('sections.contact.eyebrow'),
+      },
+      submitting: next('sections.submitting'),
+    };
+
     const seo = {
       ...sourcePayload.seo,
       title: next('seo.title'),
@@ -268,6 +317,8 @@ export class ContentService {
       metrics,
       howItWorks,
       contact,
+      nav,
+      sections,
       seo,
     };
   }
@@ -276,7 +327,7 @@ export class ContentService {
     try {
       const parsed: unknown = JSON.parse(raw);
       if (this.isLandingContentPayload(parsed)) {
-        return parsed;
+        return this.withDefaults(parsed);
       }
       this.logger.error('Invalid content payload structure, returning default EN');
     } catch (error: unknown) {
@@ -285,6 +336,13 @@ export class ContentService {
       return DEFAULT_CONTENT.en;
     }
     return DEFAULT_CONTENT.en;
+  }
+
+  private withDefaults(payload: LandingContentPayload): LandingContentPayload {
+    const fallback = DEFAULT_CONTENT[payload.locale] ?? DEFAULT_CONTENT.en;
+    if (!payload.nav) payload.nav = fallback.nav;
+    if (!payload.sections) payload.sections = fallback.sections;
+    return payload;
   }
 
   private resolveLocaleActive(locale: string, payload: string): boolean {
@@ -329,6 +387,9 @@ export class ContentService {
     if (!this.isArray(howItWorks, (item) => this.isHowItWorksItem(item))) return false;
 
     if (!this.isContact(value['contact'])) return false;
+    // nav and sections are optional for backward compatibility
+    if (value['nav'] !== undefined && !this.isNav(value['nav'])) return false;
+    if (value['sections'] !== undefined && !this.isSections(value['sections'])) return false;
     if (!this.isSeo(value['seo'])) return false;
 
     return true;
@@ -434,6 +495,32 @@ export class ContentService {
     if (!this.isRecord(value)) return false;
     if (typeof value['title'] !== 'string') return false;
     if (typeof value['description'] !== 'string') return false;
+    return true;
+  }
+
+  private isNav(value: unknown): value is LandingContentPayload['nav'] {
+    if (!Array.isArray(value)) return false;
+    return value.every((item) => {
+      if (!this.isRecord(item)) return false;
+      return typeof item['label'] === 'string' && typeof item['target'] === 'string';
+    });
+  }
+
+  private isSections(value: unknown): value is LandingContentPayload['sections'] {
+    if (!this.isRecord(value)) return false;
+    const pain = value['pain'];
+    if (!this.isRecord(pain) || typeof pain['eyebrow'] !== 'string' || typeof pain['heading'] !== 'string' || typeof pain['ctaTitle'] !== 'string') return false;
+    const features = value['features'];
+    if (!this.isRecord(features) || typeof features['eyebrow'] !== 'string' || typeof features['heading'] !== 'string') return false;
+    const comparison = value['comparison'];
+    if (!this.isRecord(comparison) || typeof comparison['heading'] !== 'string') return false;
+    const metrics = value['metrics'];
+    if (!this.isRecord(metrics) || typeof metrics['eyebrow'] !== 'string' || typeof metrics['heading'] !== 'string') return false;
+    const howItWorks = value['howItWorks'];
+    if (!this.isRecord(howItWorks) || typeof howItWorks['eyebrow'] !== 'string' || typeof howItWorks['heading'] !== 'string') return false;
+    const contact = value['contact'];
+    if (!this.isRecord(contact) || typeof contact['eyebrow'] !== 'string') return false;
+    if (typeof value['submitting'] !== 'string') return false;
     return true;
   }
 

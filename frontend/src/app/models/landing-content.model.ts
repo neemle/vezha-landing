@@ -45,6 +45,16 @@ export type LandingContent = {
       };
     };
   };
+  nav: Array<{ label: string; target: string }>;
+  sections: {
+    pain: { eyebrow: string; heading: string; ctaTitle: string };
+    features: { eyebrow: string; heading: string };
+    comparison: { heading: string };
+    metrics: { eyebrow: string; heading: string };
+    howItWorks: { eyebrow: string; heading: string };
+    contact: { eyebrow: string };
+    submitting: string;
+  };
   seo: {
     title: string;
     description: string;

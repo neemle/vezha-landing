@@ -86,6 +86,8 @@ type ContentFormGroup = FormGroup<{
 
 type ContentFormState = {
   form: ContentFormGroup;
+  nav: LandingContent['nav'];
+  sections: LandingContent['sections'];
   loading: WritableSignal<boolean>;
   saving: WritableSignal<boolean>;
   error: WritableSignal<string>;
@@ -411,6 +413,8 @@ export class AdminComponent implements OnInit {
       .subscribe({
         next: (saved) => {
           newState.form = this.createContentForm(saved, code);
+          newState.nav = saved.nav ?? this.defaultNav;
+          newState.sections = saved.sections ?? this.defaultSections;
           newState.loaded.set(true);
           newState.success.set('Locale created from EN fallback.');
           this.activeLocale.set(code);
@@ -450,6 +454,8 @@ export class AdminComponent implements OnInit {
       .subscribe({
         next: (content) => {
           state.form = this.createContentForm(content, locale);
+          state.nav = content.nav ?? this.defaultNav;
+          state.sections = content.sections ?? this.defaultSections;
           state.loaded.set(true);
           state.success.set('Loaded latest content.');
         },
@@ -468,7 +474,7 @@ export class AdminComponent implements OnInit {
       return;
     }
 
-    const payload = this.toLandingContent(state.form, locale);
+    const payload = this.toLandingContent(state, locale);
     state.saving.set(true);
     this.admin
       .updateContent(locale, payload)
@@ -511,6 +517,8 @@ export class AdminComponent implements OnInit {
         state.loading.set(false);
         const updated: LandingContent = { ...content, locale, active };
         state.form = this.createContentForm(updated, locale);
+        state.nav = content.nav ?? this.defaultNav;
+        state.sections = content.sections ?? this.defaultSections;
         state.loaded.set(true);
         this.saveLocale(locale);
         this.localeIndexSuccess.set('Locale updated.');
@@ -1055,9 +1063,28 @@ export class AdminComponent implements OnInit {
     return states;
   }
 
+  private readonly defaultNav: LandingContent['nav'] = [
+    { label: 'About us', target: 'hero' },
+    { label: 'Use Cases', target: 'features' },
+    { label: 'Guarantees', target: 'metrics' },
+    { label: 'Contacts', target: 'contact' },
+  ];
+
+  private readonly defaultSections: LandingContent['sections'] = {
+    pain: { eyebrow: 'What can go wrong', heading: 'RISKS WITHOUT MONITORING', ctaTitle: 'READY TO START?' },
+    features: { eyebrow: 'Capabilities', heading: 'HOW VEZHA 360 PROTECTS' },
+    comparison: { heading: 'BETTER THAN A SYSADMIN' },
+    metrics: { eyebrow: 'So you can trust', heading: 'ALWAYS ON DUTY, EVEN AT NIGHT AND ON HOLIDAYS' },
+    howItWorks: { eyebrow: '4 simple steps', heading: 'HOW IT WORKS' },
+    contact: { eyebrow: 'Ready Start' },
+    submitting: 'Sending...',
+  };
+
   private createState(locale: Locale): ContentFormState {
     return {
       form: this.createContentForm(undefined, locale),
+      nav: this.defaultNav,
+      sections: this.defaultSections,
       loading: signal(false),
       saving: signal(false),
       error: signal(''),
@@ -1236,7 +1263,8 @@ export class AdminComponent implements OnInit {
     return arr;
   }
 
-  private toLandingContent(form: ContentFormGroup, locale: Locale): LandingContent {
+  private toLandingContent(state: ContentFormState, locale: Locale): LandingContent {
+    const form = state.form;
     const hero = form.controls.hero.controls;
     const comparison = form.controls.comparison.controls;
     const metrics = form.controls.metrics.controls;
@@ -1321,6 +1349,8 @@ export class AdminComponent implements OnInit {
           },
         },
       },
+      nav: state.nav,
+      sections: state.sections,
       seo: {
         title: form.controls.seo.controls.title.value.trim(),
         description: form.controls.seo.controls.description.value.trim(),

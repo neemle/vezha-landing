@@ -68,9 +68,8 @@ export class LandingComponent implements OnInit {
     this.loadContent(lang);
   }
 
-  scrollToContact(): void {
-    const contact = document.getElementById('contact');
-    contact?.scrollIntoView({ behavior: 'smooth' });
+  scrollTo(id: string): void {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   }
 
   submitLead(): void {

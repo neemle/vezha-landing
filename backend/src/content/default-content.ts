@@ -45,6 +45,16 @@ export type LandingContentPayload = {
       };
     };
   };
+  nav: Array<{ label: string; target: string }>;
+  sections: {
+    pain: { eyebrow: string; heading: string; ctaTitle: string };
+    features: { eyebrow: string; heading: string };
+    comparison: { heading: string };
+    metrics: { eyebrow: string; heading: string };
+    howItWorks: { eyebrow: string; heading: string };
+    contact: { eyebrow: string };
+    submitting: string;
+  };
   seo: { title: string; description: string };
 };
 
@@ -185,6 +195,21 @@ export const DEFAULT_CONTENT: Record<string, LandingContentPayload> = {
         },
       },
     },
+    nav: [
+      { label: 'About us', target: 'hero' },
+      { label: 'Use Cases', target: 'features' },
+      { label: 'Guarantees', target: 'metrics' },
+      { label: 'Contacts', target: 'contact' },
+    ],
+    sections: {
+      pain: { eyebrow: 'What can go wrong', heading: 'RISKS WITHOUT MONITORING', ctaTitle: 'READY TO START?' },
+      features: { eyebrow: 'Capabilities', heading: 'HOW VEZHA 360 PROTECTS' },
+      comparison: { heading: 'BETTER THAN A SYSADMIN' },
+      metrics: { eyebrow: 'So you can trust', heading: 'ALWAYS ON DUTY, EVEN AT NIGHT AND ON HOLIDAYS' },
+      howItWorks: { eyebrow: '4 simple steps', heading: 'HOW IT WORKS' },
+      contact: { eyebrow: 'Ready Start' },
+      submitting: 'Sending...',
+    },
     seo: {
       title: 'VEZHA 360 - 24/7 server monitoring from $5/month',
       description:
@@ -323,6 +348,21 @@ export const DEFAULT_CONTENT: Record<string, LandingContentPayload> = {
           invalidEmail: 'Вкажіть коректний email',
         },
       },
+    },
+    nav: [
+      { label: 'Про нас', target: 'hero' },
+      { label: 'Можливості', target: 'features' },
+      { label: 'Гарантії', target: 'metrics' },
+      { label: 'Контакти', target: 'contact' },
+    ],
+    sections: {
+      pain: { eyebrow: 'Що може піти не так', heading: 'РИЗИКИ БЕЗ МОНІТОРИНГУ', ctaTitle: 'ГОТОВІ ПОЧАТИ?' },
+      features: { eyebrow: 'Можливості', heading: 'ЯК ВЕЖА 360 ЗАХИЩАЄ' },
+      comparison: { heading: 'КРАЩЕ ЗА СИСТЕМНОГО АДМІНІСТРАТОРА' },
+      metrics: { eyebrow: 'Можете довіряти', heading: 'ЗАВЖДИ НА ВАРТІ, НАВІТЬ ВНОЧІ ТА У СВЯТА' },
+      howItWorks: { eyebrow: '4 прості кроки', heading: 'ЯК ЦЕ ПРАЦЮЄ' },
+      contact: { eyebrow: 'Готові почати' },
+      submitting: 'Надсилаємо...',
     },
     seo: {
       title: 'Вежа 360 - моніторинг серверів 24/7 від $5/місяць',

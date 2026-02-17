@@ -10,18 +10,33 @@ import { PagesModule } from './pages/pages.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
+function getSqlJsConfig(): { wasmBinary: ArrayBuffer } | undefined {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const sea = require('node:sea');
+    if (sea.isSea()) {
+      return { wasmBinary: sea.getAsset('sql-wasm.wasm') };
+    }
+  } catch {
+    /* not running as SEA — use default filesystem loading */
+  }
+  return undefined;
+}
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
     ServeStaticModule.forRoot({
-      rootPath: join(__dirname, 'public', 'browser'),
+      rootPath: join(process.cwd(), 'public', 'browser'),
       exclude: ['/api', '/api/{*path}'],
     }),
     TypeOrmModule.forRoot({
-      type: 'sqlite',
-      database: process.env.DB_PATH || 'vezha.sqlite',
+      type: 'sqljs',
+      location: process.env.DB_PATH || 'vezha.sqlite',
+      autoSave: true,
       autoLoadEntities: true,
       synchronize: true,
+      sqlJsConfig: getSqlJsConfig(),
     }),
     ContentModule,
     LeadModule,
