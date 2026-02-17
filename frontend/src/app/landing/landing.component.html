@@ -1,249 +1,284 @@
 <div class="page">
   <header class="topbar">
-    <div class="brand">
-      <div class="logo-mark">
-        <span class="tower"></span>
-        <span class="flag"></span>
-      </div>
-      <div class="brand-copy">
-        <div class="name">VEZHA 360</div>
-        <div class="tagline">{{ activeLang() === 'ua' ? 'Моніторинг серверів' : 'Server monitoring' }}</div>
-      </div>
-    </div>
+    <a class="brand" href="/">
+      <img class="logo" src="assets/images/logo.svg" alt="VEZHA" />
+    </a>
+    <nav class="nav-links">
+      <a class="nav-link" href="#hero">
+        {{ activeLang() === 'ua' ? 'Про нас' : 'About us' }}
+      </a>
+      <a class="nav-link" href="#features">
+        {{ activeLang() === 'ua' ? 'Можливості' : 'Use Cases' }}
+      </a>
+      <a class="nav-link" href="#metrics">
+        {{ activeLang() === 'ua' ? 'Гарантії' : 'Guarantees' }}
+      </a>
+      <a class="nav-link" (click)="scrollToContact(); $event.preventDefault()" href="#contact">
+        {{ activeLang() === 'ua' ? 'Контакти' : 'Contacts' }}
+      </a>
+    </nav>
     <div class="top-actions">
       <div class="lang-switch">
         <label class="lang-select">
-          <select aria-label="Language" #langSelect [value]="activeLang()" (change)="switchLang(langSelect.value)">
+          <select
+            aria-label="Language"
+            #langSelect
+            [value]="activeLang()"
+            (change)="switchLang(langSelect.value)"
+          >
             @for (locale of activeLocales(); track locale.code) {
               <option [value]="locale.code">{{ locale.code.toUpperCase() }}</option>
             }
           </select>
         </label>
       </div>
-      <div class="quick-links">
-        <a
-          class="link"
-          [href]="content()?.hero?.telegramUrl || 'https://t.me/vezha360'"
-          target="_blank"
-          rel="noopener"
-        >
-          {{ content()?.hero?.telegramLabel || 'Telegram' }}
-        </a>
-        <a
-          class="link"
-          [href]="'mailto:' + (content()?.hero?.email || 'support@vezha360.com')"
-        >
-          {{ content()?.hero?.emailLabel || 'Email' }}
-        </a>
-        <button class="ghost" type="button" (click)="scrollToContact()">
-          {{ activeLang() === 'ua' ? 'Залишити заявку' : 'Leave a request' }}
-        </button>
-      </div>
     </div>
   </header>
 
   @if (loading() && !content()) {
-    <div class="banner info">Loading content...</div>
+    <section class="hero-section">
+      <div class="banner info">Loading content...</div>
+    </section>
   }
 
-  @if (error()) {
-    <div class="banner danger">{{ error() }}</div>
+  @if (error() && !content()) {
+    <section class="hero-section">
+      <div class="banner danger">{{ error() }}</div>
+    </section>
   }
 
   @if (content(); as copy) {
-    <section class="hero" id="hero">
-      <div class="hero-text">
-        <div class="badge">{{ copy.hero.badge }}</div>
-        <h1>{{ copy.hero.title }}</h1>
-        <p class="subtitle">{{ copy.hero.subtitle }}</p>
-        <p class="price-note">{{ copy.hero.priceNote }}</p>
-        <ul class="bullets">
-          @for (item of copy.hero.bullets; track item) {
-            <li>{{ item }}</li>
-          }
-        </ul>
-        <div class="cta-row">
-          <button class="primary" type="button" (click)="scrollToContact()">{{ copy.hero.primaryCta }}</button>
-          <a class="secondary" [href]="copy.hero.telegramUrl" target="_blank" rel="noopener">
-            <span class="icon telegram"></span>{{ copy.hero.telegramLabel }}
-          </a>
-          <a class="ghost" [href]="'mailto:' + copy.hero.email">
-            <span class="icon mail"></span>{{ copy.hero.emailLabel }}
-          </a>
-        </div>
-      </div>
-      <div class="hero-visual">
-        <div class="ring">
-          <div class="radar">
-            <span>CPU</span>
-            <span>RAM</span>
-            <span>NET</span>
-            <span>DISK</span>
-          </div>
-          <div class="pulse-dot"></div>
-        </div>
-        <div class="hero-footnote">24/7 | Telegram + Email | Bitrix24 ready</div>
-      </div>
-    </section>
-
-    <section class="section-block pain">
-      <div class="section-heading">
-        <p class="eyebrow">{{ activeLang() === 'ua' ? 'Що може піти не так' : 'What can go wrong' }}</p>
-        <h2>{{ activeLang() === 'ua' ? 'Ризики без моніторингу' : 'Risks without monitoring' }}</h2>
-      </div>
-      <div class="card-grid">
-        @for (risk of copy.painPoints; track risk.title) {
-          <article class="card danger-card">
-            <div class="card-icon">
-              @if (isFaIcon(risk.icon)) {
-                <i class="fa-solid" [ngClass]="risk.icon"></i>
-              } @else {
-                <span class="icon-text">{{ risk.icon || '•' }}</span>
-              }
-            </div>
-            <h3>{{ risk.title }}</h3>
-            <p>{{ risk.description }}</p>
-          </article>
-        }
-      </div>
-    </section>
-
-    <section class="section-block features">
-      <div class="section-heading">
-        <p class="eyebrow">{{ activeLang() === 'ua' ? 'Можливості' : 'Capabilities' }}</p>
-        <h2>{{ activeLang() === 'ua' ? 'Як Вежа 360 захищає' : 'How VEZHA 360 protects' }}</h2>
-      </div>
-      <div class="card-grid">
-        @for (feature of copy.features; track feature.title) {
-          <article class="card feature-card">
-            <div class="card-icon">
-              @if (isFaIcon(feature.icon)) {
-                <i class="fa-solid" [ngClass]="feature.icon"></i>
-              } @else {
-                <span class="icon-text">{{ feature.icon || '•' }}</span>
-              }
-            </div>
-            <h3>{{ feature.title }}</h3>
-            <p>{{ feature.description }}</p>
-          </article>
-        }
-      </div>
-    </section>
-
-    <section class="section-block comparison">
-      <div class="section-heading">
-        <p class="eyebrow">{{ activeLang() === 'ua' ? 'Вартість' : 'Cost' }}</p>
-        <h2>{{ activeLang() === 'ua' ? 'Краще за системного адміністратора' : 'Better than a sysadmin' }}</h2>
-        <p class="muted">{{ copy.comparison.highlight }}</p>
-      </div>
-      <div class="comparison-grid">
-        <article class="card ghost-card">
-          <div class="pill muted">Sysadmin</div>
-          <h3>{{ copy.comparison.sysadmin.title }}</h3>
-          <p class="price">{{ copy.comparison.sysadmin.price }}</p>
-          <p>{{ copy.comparison.sysadmin.description }}</p>
-        </article>
-        <article class="card highlight-card">
-          <div class="pill">{{ copy.comparison.vezha.badge }}</div>
-          <h3>{{ copy.comparison.vezha.title }}</h3>
-          <p class="price">{{ copy.comparison.vezha.price }}</p>
-          <p>{{ copy.comparison.vezha.description }}</p>
-          <button class="primary wide" type="button" (click)="scrollToContact()">
+    <section class="hero-section" id="hero">
+      <div class="hero">
+        <div class="hero-text">
+          <h1>{{ copy.hero.title }}</h1>
+          <p class="subtitle">{{ copy.hero.subtitle }}</p>
+          <button class="btn-primary" type="button" (click)="scrollToContact()">
             {{ copy.hero.primaryCta }}
           </button>
-        </article>
+        </div>
+        <div class="hero-badges">
+          @for (item of copy.hero.bullets; track item; let i = $index) {
+            <div class="hero-badge" [class.alt]="i % 2 !== 0">
+              <span class="hero-badge-text">{{ item }}</span>
+            </div>
+          }
+        </div>
       </div>
     </section>
 
-    <section class="section-block metrics">
-      <div class="section-heading">
-        <p class="eyebrow">{{ activeLang() === 'ua' ? 'Гарантії' : 'Guarantees' }}</p>
-        <h2>{{ activeLang() === 'ua' ? 'Цифри, яким можна довіряти' : 'Numbers you can trust' }}</h2>
-      </div>
-      <div class="stats-grid">
-        @for (stat of copy.metrics.stats; track stat.label) {
-          <div class="stat-card">
-            <div class="stat-value">{{ stat.value }}</div>
-            <div class="stat-label">{{ stat.label }}</div>
-          </div>
-        }
-      </div>
-      <p class="muted center">{{ copy.metrics.note }}</p>
-    </section>
-
-    <section class="section-block how">
-      <div class="section-heading">
-        <p class="eyebrow">{{ activeLang() === 'ua' ? 'Як це працює' : 'How it works' }}</p>
-        <h2>{{ activeLang() === 'ua' ? '4 прості кроки' : '4 simple steps' }}</h2>
-      </div>
-      <div class="steps">
-        @for (step of copy.howItWorks; track step.title; let i = $index) {
-          <div class="step-card">
-            <div class="step-index">0{{ i + 1 }}</div>
-            <h3>{{ step.title }}</h3>
-            <p>{{ step.description }}</p>
-          </div>
-        }
-      </div>
-    </section>
-
-    <section class="section-block contact" id="contact">
-      <div class="section-heading">
-        <p class="eyebrow">{{ activeLang() === 'ua' ? 'Звʼязок' : 'Contact' }}</p>
-        <h2>{{ copy.contact.title }}</h2>
-        <p class="muted">{{ copy.contact.subtitle }}</p>
-      </div>
-      <div class="contact-grid">
-        <form class="card form-card" [formGroup]="contactForm" (ngSubmit)="submitLead()">
-          <label>
-            <span>{{ copy.contact.form.nameLabel }}</span>
-            <input type="text" formControlName="name" placeholder="Olena / Daniel" />
-          </label>
-          <label>
-            <span>{{ copy.contact.form.emailLabel }} *</span>
-            <input type="email" formControlName="email" placeholder="you@company.com" />
-            @if (contactForm.controls.email.touched && contactForm.controls.email.invalid) {
-              <small class="error" *ngIf="contactForm.controls.email.errors?.['required']">
-                {{ copy.contact.form.errors.requiredEmail }}
-              </small>
-              <small class="error" *ngIf="contactForm.controls.email.errors?.['email']">
-                {{ copy.contact.form.errors.invalidEmail }}
-              </small>
+    <section class="section-block pain" id="pain">
+      <div class="container">
+        <div class="section-heading">
+          <span class="eyebrow">
+            {{ activeLang() === 'ua' ? 'Що може піти не так' : 'What can go wrong' }}
+          </span>
+          <h2>
+            {{ activeLang() === 'ua' ? 'РИЗИКИ БЕЗ МОНІТОРИНГУ' : 'RISKS WITHOUT MONITORING' }}
+          </h2>
+        </div>
+        <div class="pain-grid">
+          @for (risk of copy.painPoints; track risk.title; let i = $index) {
+            @if (i === 0) {
+              <article class="pain-image-card pain-span-2">
+                <img src="assets/images/pain-chaos.jpg" alt="" loading="lazy" />
+                <div class="pain-image-overlay"></div>
+              </article>
             }
-          </label>
-          <label>
-            <span>{{ copy.contact.form.phoneLabel }}</span>
-            <input type="tel" formControlName="phone" placeholder="+380..." />
-          </label>
-          <label>
-            <span>{{ copy.contact.form.messageLabel }}</span>
-            <textarea formControlName="message" rows="3"></textarea>
-          </label>
-          <button class="primary wide" type="submit" [disabled]="submitting()">
-            {{ submitting() ? (activeLang() === 'ua' ? 'Надсилаємо...' : 'Sending...') : copy.contact.form.submitLabel }}
+            <article class="card pain-card">
+              <div class="card-icon-circle">
+                @if (isFaIcon(risk.icon)) {
+                  <i class="fa-solid" [ngClass]="risk.icon"></i>
+                } @else {
+                  <span class="icon-text">{{ risk.icon || '•' }}</span>
+                }
+              </div>
+              <h3>{{ risk.title }}</h3>
+              <p>{{ risk.description }}</p>
+            </article>
+            @if (i === 2) {
+              <article class="pain-image-card">
+                <img src="assets/images/pain-laptop.jpg" alt="" loading="lazy" />
+                <div class="pain-image-overlay"></div>
+              </article>
+            }
+          }
+          <article class="card cta-card">
+            <h3>{{ activeLang() === 'ua' ? 'ГОТОВІ ПОЧАТИ?' : 'READY TO START?' }}</h3>
+            <button class="btn-primary" type="button" (click)="scrollToContact()">
+              {{ copy.hero.primaryCta }}
+            </button>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-block features" id="features">
+      <div class="container">
+        <div class="section-heading">
+          <span class="eyebrow">
+            {{ activeLang() === 'ua' ? 'Можливості' : 'Capabilities' }}
+          </span>
+          <h2>
+            {{ activeLang() === 'ua' ? 'ЯК ВЕЖА 360 ЗАХИЩАЄ' : 'HOW VEZHA 360 PROTECTS' }}
+          </h2>
+        </div>
+        <div class="features-grid">
+          @for (feature of copy.features; track feature.title) {
+            <article class="card feature-card">
+              <div class="card-icon-circle">
+                @if (isFaIcon(feature.icon)) {
+                  <i class="fa-solid" [ngClass]="feature.icon"></i>
+                } @else {
+                  <span class="icon-text">{{ feature.icon || '•' }}</span>
+                }
+              </div>
+              <h3>{{ feature.title }}</h3>
+              <p>{{ feature.description }}</p>
+            </article>
+          }
+        </div>
+        <div class="section-cta">
+          <button class="btn-primary" type="button" (click)="scrollToContact()">
+            {{ copy.hero.primaryCta }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-block comparison" id="comparison">
+      <div class="container">
+        <div class="section-heading">
+          <span class="eyebrow">{{ copy.comparison.highlight }}</span>
+          <h2>
+            {{ activeLang() === 'ua'
+              ? 'КРАЩЕ ЗА СИСТЕМНОГО АДМІНІСТРАТОРА'
+              : 'BETTER THAN A SYSADMIN' }}
+          </h2>
+        </div>
+        <div class="comparison-card">
+          <img
+            class="comparison-bg"
+            src="assets/images/server-rack.jpg"
+            alt=""
+            loading="lazy"
+          />
+          <div class="comparison-overlay"></div>
+          <div class="comparison-content">
+            <div class="comparison-col">
+              <div class="pill pill-muted">Sysadmin</div>
+              <p class="comparison-title">{{ copy.comparison.sysadmin.title }}</p>
+              <p class="comparison-desc">{{ copy.comparison.sysadmin.description }}</p>
+            </div>
+            <div class="comparison-col">
+              <div class="pill pill-accent">{{ copy.comparison.vezha.badge }}</div>
+              <p class="comparison-title">{{ copy.comparison.vezha.title }}</p>
+              <p class="comparison-desc">{{ copy.comparison.vezha.description }}</p>
+              <button class="btn-primary" type="button" (click)="scrollToContact()">
+                {{ copy.hero.primaryCta }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-block metrics" id="metrics">
+      <div class="container">
+        <div class="section-heading">
+          <span class="eyebrow">
+            {{ activeLang() === 'ua' ? 'Можете довіряти' : 'So you can trust' }}
+          </span>
+          <h2>
+            {{ activeLang() === 'ua'
+              ? 'ЗАВЖДИ НА ВАРТІ, НАВІТЬ ВНОЧІ ТА У СВЯТА'
+              : 'ALWAYS ON DUTY, EVEN AT NIGHT AND ON HOLIDAYS' }}
+          </h2>
+        </div>
+        <div class="stats-grid">
+          @for (stat of copy.metrics.stats; track stat.label) {
+            <div class="stat-card">
+              <div class="stat-value">{{ stat.value }}</div>
+              <div class="stat-label">{{ stat.label }}</div>
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="section-block how-section" id="how">
+      <div class="container how-layout">
+        <div class="how-left">
+          <span class="eyebrow eyebrow-light">
+            {{ activeLang() === 'ua' ? '4 прості кроки' : '4 simple steps' }}
+          </span>
+          <h2>{{ activeLang() === 'ua' ? 'ЯК ЦЕ ПРАЦЮЄ' : 'HOW IT WORKS' }}</h2>
+          <button class="btn-primary" type="button" (click)="scrollToContact()">
+            {{ copy.hero.primaryCta }}
+          </button>
+        </div>
+        <div class="steps-grid">
+          @for (step of copy.howItWorks; track step.title; let i = $index) {
+            <div class="step-card">
+              <div class="step-index">{{ i + 1 }}</div>
+              <h3>{{ step.title }}</h3>
+              <p>{{ step.description }}</p>
+            </div>
+          }
+        </div>
+      </div>
+    </section>
+
+    <section class="section-block contact-section" id="contact">
+      <div class="container contact-layout">
+        <div class="contact-text">
+          <span class="eyebrow eyebrow-light">
+            {{ activeLang() === 'ua' ? 'Готові почати' : 'Ready Start' }}
+          </span>
+          <h2>{{ copy.contact.title }}</h2>
+          <p class="contact-subtitle">{{ copy.contact.subtitle }}</p>
+        </div>
+        <form class="contact-form" [formGroup]="contactForm" (ngSubmit)="submitLead()">
+          <input
+            type="text"
+            formControlName="name"
+            [placeholder]="copy.contact.form.nameLabel"
+          />
+          <input
+            type="email"
+            formControlName="email"
+            [placeholder]="copy.contact.form.emailLabel + ' *'"
+          />
+          @if (contactForm.controls.email.touched && contactForm.controls.email.invalid) {
+            <small class="field-error" *ngIf="contactForm.controls.email.errors?.['required']">
+              {{ copy.contact.form.errors.requiredEmail }}
+            </small>
+            <small class="field-error" *ngIf="contactForm.controls.email.errors?.['email']">
+              {{ copy.contact.form.errors.invalidEmail }}
+            </small>
+          }
+          <input
+            type="tel"
+            formControlName="phone"
+            [placeholder]="copy.contact.form.phoneLabel"
+          />
+          <textarea
+            formControlName="message"
+            rows="3"
+            [placeholder]="copy.contact.form.messageLabel"
+          ></textarea>
+          <button class="btn-primary btn-wide" type="submit" [disabled]="submitting()">
+            {{ submitting()
+              ? (activeLang() === 'ua' ? 'Надсилаємо...' : 'Sending...')
+              : copy.contact.form.submitLabel }}
           </button>
           @if (submitted()) {
-            <div class="success">{{ copy.contact.thankYou }}</div>
+            <div class="success-msg">{{ copy.contact.thankYou }}</div>
           }
           @if (error() && !loading()) {
-            <div class="error-block">{{ error() }}</div>
+            <div class="error-msg">{{ error() }}</div>
           }
         </form>
-        <div class="card contact-card">
-          <div class="contact-actions">
-            <a class="secondary wide" [href]="copy.contact.telegramUrl" target="_blank" rel="noopener">
-              <span class="icon telegram"></span>{{ copy.contact.telegramLabel }}
-            </a>
-            <a class="ghost wide" [href]="'mailto:' + copy.contact.email">
-              <span class="icon mail"></span>{{ copy.contact.emailLabel }}
-            </a>
-          </div>
-          <ul class="contact-bullets">
-            <li>{{ activeLang() === 'ua' ? 'Відповідь протягом робочого дня' : 'Response within one business day' }}</li>
-            <li>{{ activeLang() === 'ua' ? 'Telegram + Email сповіщення' : 'Telegram + Email alerts' }}</li>
-            <li>{{ activeLang() === 'ua' ? 'Моніторинг Bitrix24 та серверів' : 'Monitoring for Bitrix24 and servers' }}</li>
-          </ul>
-        </div>
       </div>
     </section>
   }

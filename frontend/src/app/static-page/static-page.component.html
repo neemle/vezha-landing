@@ -1,42 +1,41 @@
 <div class="page">
   <header class="topbar">
     <a routerLink="/" class="brand">
-      <div class="logo-mark" aria-hidden="true">
-        <span class="tower"></span>
-        <span class="flag"></span>
-      </div>
-      <div class="brand-copy">
-        <div class="name">VEZHA 360</div>
-        <div class="tagline">{{ activeLang() === 'ua' ? 'Сторінка' : 'Page' }}</div>
-      </div>
+      <img class="logo" src="assets/images/logo.svg" alt="VEZHA" />
     </a>
-    <div class="top-actions">
-      <div class="lang-switch">
-        <label class="lang-select">
-          <select aria-label="Language" #langSelect [value]="activeLang()" (change)="switchLang(langSelect.value)">
-            @for (locale of activeLocales(); track locale.code) {
-              <option [value]="locale.code">{{ locale.code.toUpperCase() }}</option>
-            }
-          </select>
-        </label>
-      </div>
-      <a routerLink="/" class="link">{{ activeLang() === 'ua' ? '← На головну' : '← Back' }}</a>
+    <div class="lang-select">
+      <select
+        aria-label="Language"
+        #langSelect
+        [value]="activeLang()"
+        (change)="switchLang(langSelect.value)"
+      >
+        @for (locale of activeLocales(); track locale.code) {
+          <option [value]="locale.code">{{ locale.code.toUpperCase() }}</option>
+        }
+      </select>
     </div>
   </header>
 
   @if (loading() && !page()) {
-    <div class="banner info">Loading...</div>
+    <div class="content-area">
+      <p class="status-message">Loading...</p>
+    </div>
   }
   @if (error()) {
-    <div class="banner danger">{{ error() }}</div>
+    <div class="content-area">
+      <p class="status-message error">{{ error() }}</p>
+    </div>
   }
 
   @if (page(); as p) {
-    <article class="card page-card">
+    <article class="content-area">
       <h1>{{ p.title }}</h1>
       @if (p.locale !== activeLang()) {
-        <p class="muted fallback-note">
-          {{ activeLang() === 'ua' ? 'Показано англійську версію (fallback).' : 'Showing English fallback.' }}
+        <p class="fallback-note">
+          {{ activeLang() === 'ua'
+            ? 'Показано англійську версію (fallback).'
+            : 'Showing English fallback.' }}
         </p>
       }
       <div class="page-content" [innerHTML]="p.content"></div>

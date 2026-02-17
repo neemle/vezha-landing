@@ -1,0 +1,48 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Bash(curl:*)",
+      "Bash(docker compose:*)",
+      "WebFetch(domain:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker images:*)"
+    ],
+    "filesystem": {
+      "read": true,
+      "write": true,
+      "delete": true,
+      "create": true
+    },
+    "commands": {
+      "execute": true,
+      "allowed": [
+        "*"
+      ]
+    },
+    "network": {
+      "allow": true
+    }
+  },
+  "safety": {
+    "confirmations": {
+      "filesystem": false,
+      "commands": false,
+      "network": false
+    }
+  },
+  "execution": {
+    "autoApprove": true,
+    "nonInteractive": true,
+    "sandboxed": false
+  },
+  "workspace": {
+    "restrictToRoot": true,
+    "followSymlinks": false
+  },
+  "logging": {
+    "level": "info",
+    "commands": true,
+    "filesystem": true
+  }
+}

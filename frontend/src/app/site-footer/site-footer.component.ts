@@ -19,6 +19,7 @@ export class SiteFooterComponent {
 
   private readonly langSignal = signal<string>('');
   readonly currentLang = this.langSignal.asReadonly();
+  readonly currentYear = new Date().getFullYear();
 
   footer = signal<FooterLinksResponse | null>(null);
   loading = signal(false);

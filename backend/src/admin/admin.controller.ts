@@ -84,6 +84,18 @@ export class AdminController {
     return this.leadService.list({ exported: exportedState, includeBad: includeBadBool, search });
   }
 
+  @ApiOperation({ summary: 'Export unexported leads to CSV and mark them exported' })
+  @ApiProduces('text/csv')
+  @Get('leads/export')
+  async exportLeads(@Res({ passthrough: true }) res: Response): Promise<string> {
+    const leads = await this.leadService.exportPending();
+    const csv = this.toCsv(leads);
+    const stamp = new Date().toISOString().replace(/[-:T]/g, '').split('.')[0];
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="leads-${stamp}.csv"`);
+    return csv;
+  }
+
   @ApiOperation({ summary: 'Mark lead as bad/good' })
   @ApiOkResponse({ description: 'Lead updated', type: LeadEntity })
   @Patch('leads/:id/bad')
@@ -94,20 +106,8 @@ export class AdminController {
     return this.leadService.setBadFlag(id, dto.bad);
   }
 
-  @ApiOperation({ summary: 'Export unexported leads to CSV and mark them exported' })
-  @ApiProduces('text/csv')
-  @Get('leads/export')
-  async exportLeads(@Res() res: Response) {
-    const leads = await this.leadService.exportPending();
-    const csv = this.toCsv(leads);
-    const stamp = new Date().toISOString().replace(/[-:T]/g, '').split('.')[0];
-    res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename="leads-${stamp}.csv"`);
-    return res.send(csv);
-  }
-
   private toCsv(leads: LeadEntity[]): string {
-    const headers = ['id', 'name', 'email', 'phone', 'message', 'lang', 'bad', 'createdAt', 'exportedAt'];
+    const headers = ['id', 'name', 'email', 'phone', 'message', 'lang', 'referrer', 'bad', 'createdAt', 'exportedAt'];
     const escape = (value: unknown) => {
       if (value === null || value === undefined) return '';
       const str = String(value).replace(/"/g, '""');
@@ -122,6 +122,7 @@ export class AdminController {
         lead.phone ?? '',
         lead.message ?? '',
         lead.lang ?? '',
+        lead.referrer ?? '',
         lead.bad ? 'true' : 'false',
         lead.createdAt?.toISOString() ?? '',
         lead.exportedAt?.toISOString() ?? '',

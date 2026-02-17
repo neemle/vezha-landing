@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity({ name: 'leads' })
@@ -26,6 +26,10 @@ export class LeadEntity {
   @ApiProperty({ example: 'en' })
   @Column({ nullable: true })
   lang?: string;
+
+  @ApiPropertyOptional({ example: 'https://google.com', description: 'HTTP referrer' })
+  @Column({ nullable: true })
+  referrer?: string;
 
   @ApiProperty({ default: false })
   @Column({ type: 'boolean', default: false })

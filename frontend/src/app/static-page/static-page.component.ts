@@ -40,7 +40,10 @@ export class StaticPageComponent implements OnInit {
       .pipe(
         map(([params, query]) => {
           const slug = params.get('slug') ?? '';
-          const lang = (query.get('lang') ?? 'en').trim() || 'en';
+          const queryLang = query.get('lang');
+          const lang = queryLang
+            ? queryLang.trim() || 'en'
+            : this.detectBrowserLang();
           return { slug, lang };
         }),
         distinctUntilChanged((a, b) => a.slug === b.slug && a.lang === b.lang),
@@ -101,6 +104,16 @@ export class StaticPageComponent implements OnInit {
         ]);
       },
     });
+  }
+
+  private detectBrowserLang(): string {
+    if (typeof navigator === 'undefined') return 'en';
+    const languages = navigator.languages ?? [navigator.language];
+    for (const lang of languages) {
+      const normalized = this.normalizeLocale(lang);
+      if (normalized && normalized !== 'en') return normalized;
+    }
+    return 'en';
   }
 
   private normalizeLocale(locale: string | null | undefined): string {

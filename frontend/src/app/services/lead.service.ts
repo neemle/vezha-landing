@@ -8,6 +8,7 @@ export type LeadPayload = {
   phone?: string;
   message?: string;
   lang?: string;
+  referrer?: string;
 };
 
 @Injectable({ providedIn: 'root' })

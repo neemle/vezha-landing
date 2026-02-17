@@ -5,6 +5,7 @@ export type Lead = {
   phone?: string | null;
   message?: string | null;
   lang?: string | null;
+  referrer?: string | null;
   bad: boolean;
   createdAt: string;
   exportedAt?: string | null;

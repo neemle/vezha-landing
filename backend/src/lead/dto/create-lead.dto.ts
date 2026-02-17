@@ -34,4 +34,10 @@ export class CreateLeadDto {
   @IsString()
   @MaxLength(5)
   lang?: string;
+
+  @ApiPropertyOptional({ description: 'HTTP referrer URL', maxLength: 500, example: 'https://google.com' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  referrer?: string;
 }

@@ -78,7 +78,8 @@ export class LandingComponent implements OnInit {
       this.contactForm.markAllAsTouched();
       return;
     }
-    const payload = { ...this.contactForm.getRawValue(), lang: this.activeLang() };
+    const referrer = typeof document !== 'undefined' ? document.referrer : '';
+    const payload = { ...this.contactForm.getRawValue(), lang: this.activeLang(), referrer: referrer || undefined };
     this.submitting.set(true);
     this.error.set('');
     this.leadService
@@ -141,7 +142,10 @@ export class LandingComponent implements OnInit {
   }
 
   private loadLocalesAndContent(): void {
-    const requestedLang = this.normalizeLocale(this.route.snapshot.queryParamMap.get('lang'));
+    const queryLang = this.route.snapshot.queryParamMap.get('lang');
+    const requestedLang = queryLang
+      ? this.normalizeLocale(queryLang)
+      : this.detectBrowserLang();
     this.contentService.getLocales().subscribe({
       next: (locales) => {
         const mapped = locales
@@ -155,14 +159,12 @@ export class LandingComponent implements OnInit {
         const isRequestedActive = list.some((item) => item.code === requestedLang && item.active);
         const resolved = isRequestedActive ? requestedLang : 'en';
         this.activeLang.set(resolved);
-        if (resolved !== requestedLang) {
-          this.router.navigate([], {
-            relativeTo: this.route,
-            queryParams: { lang: resolved },
-            queryParamsHandling: 'merge',
-            replaceUrl: true,
-          });
-        }
+        this.router.navigate([], {
+          relativeTo: this.route,
+          queryParams: { lang: resolved },
+          queryParamsHandling: 'merge',
+          replaceUrl: true,
+        });
         this.loadContent(resolved);
       },
       error: () => {
@@ -170,6 +172,16 @@ export class LandingComponent implements OnInit {
         this.loadContent(this.activeLang());
       },
     });
+  }
+
+  private detectBrowserLang(): string {
+    if (typeof navigator === 'undefined') return 'en';
+    const languages = navigator.languages ?? [navigator.language];
+    for (const lang of languages) {
+      const normalized = this.normalizeLocale(lang);
+      if (normalized && normalized !== 'en') return normalized;
+    }
+    return 'en';
   }
 
   private normalizeLocale(locale: string | null | undefined): string {
