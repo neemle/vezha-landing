@@ -1,0 +1,39 @@
+services:
+  landing:
+    image: ${IMAGE}:${TAG}
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT}
+      DB_PATH: /db/vezha.sqlite
+      ADMIN_TOKEN: ${ADMIN_TOKEN}
+    volumes:
+      - db:/db
+    labels:
+      # Enable Traefik routing and networking
+      - "traefik.enable=true"
+      # Set routing network
+      - "traefik.docker.network=traefik-net"
+
+      # Permanent redirect from 80 to 443
+      - "traefik.http.routers.${TRAEFIK_SERVICE}_http.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.${TRAEFIK_SERVICE}_http.entrypoints=web"
+      - "traefik.http.routers.${TRAEFIK_SERVICE}_http.middlewares=${TRAEFIK_SERVICE}_https"
+      - "traefik.http.middlewares.${TRAEFIK_SERVICE}_https.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.${TRAEFIK_SERVICE}_https.redirectscheme.permanent=true"
+
+      # Secure routing and load balancing
+      - "traefik.http.routers.${TRAEFIK_SERVICE}.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.${TRAEFIK_SERVICE}.entrypoints=websecure"
+      - "traefik.http.routers.${TRAEFIK_SERVICE}.tls=true"
+      - "traefik.http.routers.${TRAEFIK_SERVICE}.tls.certresolver=embedded"
+      - "traefik.http.services.${TRAEFIK_SERVICE}.loadbalancer.server.port=${PORT}"
+
+    networks:
+      - traefik-net
+
+volumes:
+  db:
+
+networks:
+  traefik-net:
+    external: true

@@ -1,12 +1,12 @@
 <div class="page">
   <header class="topbar">
-    <a class="brand" href="/">
+    <a class="brand" routerLink="/" [queryParams]="{ lang: activeLang() }">
       <img class="logo" src="assets/images/logo.svg" alt="VEZHA" />
     </a>
     <nav class="nav-links">
       @if (content(); as c) {
         @for (item of c.nav; track item.target) {
-          <a class="nav-link" (click)="scrollTo(item.target); $event.preventDefault()" [attr.href]="'#' + item.target">
+          <a class="nav-link" (click)="scrollTo(item.target, $event)" [attr.href]="'#' + item.target">
             {{ item.label }}
           </a>
         }

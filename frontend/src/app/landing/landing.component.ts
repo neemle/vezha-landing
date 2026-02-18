@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { LandingContent } from '../models/landing-content.model';
 import { ContentService } from '../services/content.service';
@@ -12,7 +12,7 @@ import { SiteFooterComponent } from '../site-footer/site-footer.component';
 @Component({
   selector: 'app-landing',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, SiteFooterComponent],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, SiteFooterComponent],
   templateUrl: './landing.component.html',
   styleUrl: './landing.component.scss'
 })
@@ -68,7 +68,8 @@ export class LandingComponent implements OnInit {
     this.loadContent(lang);
   }
 
-  scrollTo(id: string): void {
+  scrollTo(id: string, event?: Event): void {
+    event?.preventDefault();
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
   }
 

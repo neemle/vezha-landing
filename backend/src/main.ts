@@ -2,11 +2,20 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { chmodSync, existsSync } from 'fs';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
+function ensureDbPermissions(): void {
+  const dbPath = process.env.DB_PATH || 'vezha.sqlite';
+  if (existsSync(dbPath)) {
+    chmodSync(dbPath, 0o666);
+  }
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  ensureDbPermissions();
   app.set('trust proxy', true);
   app.enableCors({ origin: true });
   app.setGlobalPrefix('api');
